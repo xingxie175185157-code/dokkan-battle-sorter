@@ -52,7 +52,7 @@ cat data/report.txt
 ## 提 Pull Request
 
 ```bash
-git clone https://github.com/OWNER/dokkan-battle-sorter.git
+git clone https://github.com/xingxie175185157-code/dokkan-battle-sorter.git
 cd dokkan-battle-sorter
 npm install          # 只有测试需要依赖，应用本体零依赖
 npm test             # 三套测试，改完必须全绿

@@ -78,7 +78,7 @@
 - 数据存 localStorage，关闭浏览器后仍在
 - 单文件 HTML、零依赖、零构建，双击即用
 
-[未发布]: https://github.com/OWNER/dokkan-battle-sorter/compare/v2.1.0...HEAD
-[2.1.0]: https://github.com/OWNER/dokkan-battle-sorter/compare/v2.0.0...v2.1.0
-[2.0.0]: https://github.com/OWNER/dokkan-battle-sorter/compare/v1.0.0...v2.0.0
-[1.0.0]: https://github.com/OWNER/dokkan-battle-sorter/releases/tag/v1.0.0
+[未发布]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v1.0.0...v2.0.0
+[1.0.0]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/releases/tag/v1.0.0

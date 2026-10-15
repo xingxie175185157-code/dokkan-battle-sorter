@@ -16,13 +16,13 @@
     "no-dependencies"
   ],
   "license": "MIT",
-  "homepage": "https://OWNER.github.io/dokkan-battle-sorter/",
+  "homepage": "https://xingxie175185157-code.github.io/dokkan-battle-sorter/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OWNER/dokkan-battle-sorter.git"
+    "url": "git+https://github.com/xingxie175185157-code/dokkan-battle-sorter.git"
   },
   "bugs": {
-    "url": "https://github.com/OWNER/dokkan-battle-sorter/issues"
+    "url": "https://github.com/xingxie175185157-code/dokkan-battle-sorter/issues"
   },
   "engines": {
     "node": ">=18"

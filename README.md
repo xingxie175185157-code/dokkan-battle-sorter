@@ -8,13 +8,13 @@
 
 7 人队伍的循环槽位推演 · 拖拽改序连锁重算 · 拖到指定回合自动反推前置排序 · 1458 张全角色中文图鉴
 
-[![CI](https://github.com/OWNER/dokkan-battle-sorter/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/dokkan-battle-sorter/actions/workflows/ci.yml)
+[![CI](https://github.com/xingxie175185157-code/dokkan-battle-sorter/actions/workflows/ci.yml/badge.svg)](https://github.com/xingxie175185157-code/dokkan-battle-sorter/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](package.json)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-success.svg)](#-零依赖)
-[![Pages](https://img.shields.io/badge/demo-GitHub%20Pages-ff8a00.svg)](https://OWNER.github.io/dokkan-battle-sorter/)
+[![Pages](https://img.shields.io/badge/demo-GitHub%20Pages-ff8a00.svg)](https://xingxie175185157-code.github.io/dokkan-battle-sorter/)
 
-[在线体验](https://OWNER.github.io/dokkan-battle-sorter/) · [使用说明](#-使用说明) · [数据说明](#-图鉴数据) · [参与开发](#-参与开发)
+[在线体验](https://xingxie175185157-code.github.io/dokkan-battle-sorter/) · [使用说明](#-使用说明) · [数据说明](#-图鉴数据) · [参与开发](#-参与开发)
 
 </div>
 
@@ -68,12 +68,12 @@ npm run serve 3000     # 指定端口
 
 ### 方式三：在线使用
 
-打开 <https://OWNER.github.io/dokkan-battle-sorter/>
+打开 <https://xingxie175185157-code.github.io/dokkan-battle-sorter/>
 
 ### 方式四：clone 一份自己改
 
 ```bash
-git clone https://github.com/OWNER/dokkan-battle-sorter.git
+git clone https://github.com/xingxie175185157-code/dokkan-battle-sorter.git
 cd dokkan-battle-sorter
 npm install            # 仅测试需要（jsdom），应用本体零依赖
 npm test
