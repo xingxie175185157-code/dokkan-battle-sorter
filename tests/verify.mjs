@@ -167,7 +167,7 @@ ok(/version:\s*2/.test(inlineSrc) && /Array\.isArray\(data\.teams\)/.test(inline
 // 「只存人」的约定：编队里不得出现回合排程相关字段
 const tpPush = (inlineSrc.match(/teams\.push\(\{[^}]*\}\)/) || [''])[0];
 ok(tpPush.length > 0 && !/turns|deck|turnCount/.test(tpPush), '编队只保存成员与初始顺序，不含回合排程');
-ok(/version:\s*'2\.2\.0'/.test(inlineSrc), '应用版本号已升到 2.2.0');
+ok(/version:\s*'2\.2\.1'/.test(inlineSrc), '应用版本号已升到 2.2.1');
 
 const s = R.cards[0];
 console.log(`\n样卡: ${s[4]} ${s[1]} | ${s[2]} | ${s[5]} ${s[6]} | 链接 ${s[9].map(i => R.links[i]).join('、')}`);

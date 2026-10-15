@@ -16,7 +16,8 @@ function loadJsdom() {
   console.error('未找到 jsdom。请先安装：npm install --no-save jsdom');
   process.exit(2);
 }
-const { JSDOM, VirtualConsole, requestInterceptor } = loadJsdom();
+const jsdomPkg = loadJsdom();
+const { JSDOM, VirtualConsole } = jsdomPkg;
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FILE = path.join(ROOT, 'index.html');
@@ -36,34 +37,55 @@ vc.on('error', (...a) => errors.push(a.join(' ')));
    这里给一个假源 http://localhost/，并把 roster.js 从磁盘读出来喂给页面：
    既不需要起服务器、也不联网，localStorage 又能真正工作。 */
 const LOCAL_ORIGIN = 'http://localhost';
-const intercept = requestInterceptor((request) => {
-  let u;
-  try { u = new URL(request.url); } catch { return new Response('', { status: 200 }); }
 
-  if (u.origin !== LOCAL_ORIGIN) {
-    // 外部资源（CDN 头像等）不加载，也不联网：返回空 200，避免制造资源加载错误
-    return new Response('', { status: 200 });
-  }
+/* 把「页面要的本地资源」从磁盘读出来。
+   返回 Buffer = 命中；null = 外部资源（不加载）；undefined = 本地但缺失/越界。 */
+function readLocal(url) {
+  let u;
+  try { u = new URL(url); } catch { return null; }
+  if (u.origin !== LOCAL_ORIGIN) return null;             // 外部资源（CDN 头像等）不加载也不联网
   const rel = decodeURIComponent(u.pathname).replace(/^\/+/, '');
   const file = path.resolve(ROOT, rel);
-  if (!file.startsWith(ROOT)) return new Response('', { status: 403 });   // 防目录穿越
-  try {
-    const isJs = /\.m?js$/.test(file);
-    return new Response(fs.readFileSync(file), {
-      status: 200,
-      headers: { 'Content-Type': isJs ? 'application/javascript' : 'application/octet-stream' },
+  if (!file.startsWith(ROOT)) return undefined;           // 防目录穿越
+  try { return fs.readFileSync(file); } catch { return undefined; }
+}
+
+/* 两代 jsdom 的本地资源加载方式不同，这里都支持，避免测试挑 jsdom 版本：
+     - jsdom ≥ 27：requestInterceptor + resources.interceptors（新 API）
+     - jsdom 24~26：ResourceLoader 子类（旧 API；24 没有 requestInterceptor） */
+const resources = (() => {
+  if (typeof jsdomPkg.requestInterceptor === 'function') {
+    const intercept = jsdomPkg.requestInterceptor((request) => {
+      const buf = readLocal(request.url);
+      if (buf === null) return new Response('', { status: 200 });      // 外部资源：空 200，不制造加载错误
+      if (buf === undefined) return new Response('', { status: 404 });
+      const isJs = /\.m?js$/.test(request.url);
+      return new Response(buf, {
+        status: 200,
+        headers: { 'Content-Type': isJs ? 'application/javascript' : 'application/octet-stream' },
+      });
     });
-  } catch {
-    return new Response('', { status: 404 });
+    return { interceptors: [intercept] };
   }
-});
+  if (typeof jsdomPkg.ResourceLoader === 'function') {
+    class LocalLoader extends jsdomPkg.ResourceLoader {
+      fetch(url) {
+        const buf = readLocal(url);
+        if (buf === null || buf === undefined) return null;            // 返回 null = 不加载
+        return Promise.resolve(buf);
+      }
+    }
+    return new LocalLoader();
+  }
+  return undefined;
+})();
 
 const dom = new JSDOM(fs.readFileSync(FILE, 'utf8'), {
   url: LOCAL_ORIGIN + '/',
   runScripts: 'dangerously',
   pretendToBeVisual: true,
   virtualConsole: vc,
-  resources: { interceptors: [intercept] },
+  resources,
 });
 const win = dom.window, doc = win.document;
 

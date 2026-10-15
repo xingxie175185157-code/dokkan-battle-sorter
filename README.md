@@ -215,6 +215,8 @@ dokkan-battle-sorter/
 
 - Node.js **≥ 18**（`tests/verify.mjs` 用到内置 `fetch`）
 - 应用本体**零依赖**；仅 jsdom 测试需要 `npm install`
+- jsdom **版本不限**：`tests/dom.mjs` 对 jsdom ≥ 27 用 `requestInterceptor`，
+  对 24~26 回退到 `ResourceLoader` 子类（已用 24 与 30 双版本验证）
 
 ### 测试
 
@@ -258,7 +260,7 @@ npm run rebuild   # 上面两步一起
 
 ### 对外接口
 
-`window.DokkanSorter`（版本 `2.2.0`）：
+`window.DokkanSorter`（版本 `2.2.1`）：
 
 ```js
 getRoster()                    // 图鉴数组

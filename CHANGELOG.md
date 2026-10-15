@@ -5,6 +5,22 @@
 
 ## [未发布]
 
+## [2.2.1] - 2026-10-15
+
+### 修复
+
+- **CI 在 jsdom 24 下直接崩溃**：真实页面测试为了让 `localStorage` 真正可用
+  （`file://` 是 opaque origin，一访问就抛 `SecurityError`，页面里的 `save()` 会静默失败），
+  改用了 `requestInterceptor` + `resources.interceptors`。
+  但 `requestInterceptor` 是 **jsdom 27 才引入的 API**，而 CI 装的是 `jsdom@^24.1.0`，
+  该导出为 `undefined`，三个 Node 版本全部在测试启动阶段报 `TypeError` 挂掉。
+  现在测试同时兼容两代 jsdom：新版走 `requestInterceptor`，旧版回退到 `ResourceLoader` 子类，
+  不再挑 jsdom 版本（已用 jsdom 24 与 jsdom 30 双版本验证，均 78/78 通过）。
+
+### 变更
+
+- 应用版本号升至 `2.2.1`（纯测试基建修复，页面行为无变化）
+
 ## [2.2.0] - 2026-10-15
 
 ### 新增
@@ -43,8 +59,9 @@
 - 端到端静态校验：36 → **51 项**（新增编队 DOM 契约、函数存在性、导出格式 v2、**「编队只存人」的结构断言**）
 - 真实页面测试（jsdom）：40 → **78 项**（新增保存 / 重复拒绝 / 一键载入 / 重命名 / 属性指纹 /
   持久化 / 导入 / 空队伍拦截 / 自动填满 key 格式）
-  - 测试环境从 `file://` 改为**真实 http 源 + 自定义资源拦截器**（jsdom 30 的 `requestInterceptor`）：
+  - 测试环境从 `file://` 改为**真实 http 源 + 自定义资源加载**：
     `file://` 下源是 opaque origin，`localStorage` 直接抛异常，持久化行为此前完全测不到
+    （该加载方式在 2.2.1 补上 jsdom 24~26 的兼容回退）
 
 ## [2.1.0] - 2026-10-15
 
@@ -119,7 +136,8 @@
 - 数据存 localStorage，关闭浏览器后仍在
 - 单文件 HTML、零依赖、零构建，双击即用
 
-[未发布]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.2.0...HEAD
+[未发布]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.2.1...HEAD
+[2.2.1]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v1.0.0...v2.0.0
