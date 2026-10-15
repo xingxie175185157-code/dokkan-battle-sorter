@@ -1,0 +1,98 @@
+name: 🐞 反馈 Bug
+description: 报告一个可以复现的问题（排布算错、拖拽异常、界面错误等）
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！请尽量把复现步骤写清楚，方便定位。
+        译名不对请改用「译名纠错」模板。
+
+  - type: textarea
+    id: what
+    attributes:
+      label: 问题描述
+      description: 实际发生了什么？你期望发生什么？
+      placeholder: |
+        例如：把角色拖到第 6 回合第 2 位后，第 3 回合的牌序变成了两个人重复。
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 请按顺序列出操作。越具体越好。
+      placeholder: |
+        1. 打开 index.html
+        2. 依次加入这 7 个角色：___
+        3. 先把 A 拖到第 5 回合第 1 位
+        4. 再把 B 拖到第 1 回合第 3 位
+        5. 观察第 1 回合的显示
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+      placeholder: 第 1 回合应该显示 ___
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 问题出在哪个部分
+      multiple: true
+      options:
+        - 回合推演 / 槽位顺序算错
+        - 拖拽改序（同回合换位）
+        - 拖到指定回合（反推前置）
+        - 出场回合汇总
+        - 队伍初始顺序
+        - 图鉴搜索 / 筛选
+        - 收藏（★）到「我的」
+        - 语言切换（中文 / English / 中英）
+        - 导入 / 导出预设库
+        - 头像不显示
+        - 界面 / 样式
+        - 其它
+    validations:
+      required: true
+
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      description: 浏览器与版本、操作系统；如果是本地打开请注明是双击 file:// 还是 http 服务
+      placeholder: Chrome 130 / Windows 11 / 双击 index.html 打开
+    validations:
+      required: true
+
+  - type: input
+    id: roster
+    attributes:
+      label: 是否有 roster.js
+      description: 与 index.html 同目录的图鉴数据文件是否存在（不存在时图鉴为空）
+      placeholder: 同目录下已存在 / 不存在
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 截图 / 控制台报错 / 导出数据
+      description: 可粘贴 F12 控制台报错，或点「导出预设库」后把 JSON 贴进来（有助于精确定位）
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 自查
+      options:
+        - label: 我已确认这是最新版本，并搜索过是否已有相同 Issue
+          required: true

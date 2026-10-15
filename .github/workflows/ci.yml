@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: 测试 · Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['18', '20', '22']
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: 安装测试依赖（jsdom，应用本体零依赖）
+        run: npm install --no-audit --no-fund
+
+      - name: 1/3 引擎回归
+        run: npm run test:engine
+
+      - name: 2/3 端到端静态校验
+        run: npm run test:static
+
+      - name: 3/3 真实 DOM 交互测试
+        run: npm run test:dom
+
+  generated:
+    name: 生成物同步检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 用词典与原始数据重新构建
+        run: npm run build
+
+      - name: 校验生成物与仓库一致
+        run: |
+          set -e
+          # roster.js 里的 generated 是构建日期，逐日变化属正常，比对前先归一化
+          norm() { sed -E 's/"generated":"[0-9]{4}-[0-9]{2}-[0-9]{2}"/"generated":"X"/' "$1"; }
+          git show HEAD:roster.js > /tmp/roster.committed.js
+          norm /tmp/roster.committed.js > /tmp/roster.old
+          norm roster.js               > /tmp/roster.new
+
+          if ! diff -q /tmp/roster.old /tmp/roster.new > /dev/null; then
+            echo "::error::roster.js 与 tools/i18n-zh.json / data/raw-roster.json 不同步"
+            echo "请在本地运行 'npm run build' 后提交生成结果。"
+            diff /tmp/roster.old /tmp/roster.new | head -20
+            exit 1
+          fi
+
+          if ! git diff --quiet -- data/report.txt; then
+            echo "::error::data/report.txt 与词典/原始数据不同步，请运行 'npm run build' 后提交"
+            git diff --stat -- data/report.txt
+            exit 1
+          fi
+
+          echo "✅ roster.js 与 data/report.txt 均为最新（数据与词典同步）"

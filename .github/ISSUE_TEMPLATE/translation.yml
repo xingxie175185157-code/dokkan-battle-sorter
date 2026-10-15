@@ -1,0 +1,64 @@
+name: ✏️ 译名纠错
+description: 报告角色名 / 链接技能 / 分类的中文译名与游戏内不一致
+title: "[译名] "
+labels: ["translation", "data"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        角色名是由 `tools/i18n-zh.json` 里的术语表**逐词对照生成**的，所以修正通常只需改几条词条。
+        请尽量填全，我会直接改词典重新构建。
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 哪一类译名有问题
+      options:
+        - 角色名
+        - 链接技能
+        - 分类
+        - 角色称号（目前保留英文）
+    validations:
+      required: true
+
+  - type: input
+    id: current
+    attributes:
+      label: 当前显示（仓库里生成的）
+      placeholder: 索萨（克维拉的机甲战队）
+    validations:
+      required: true
+
+  - type: input
+    id: correct
+    attributes:
+      label: 游戏内实际显示
+      placeholder: 克维拉的装甲小队
+    validations:
+      required: true
+
+  - type: input
+    id: card
+    attributes:
+      label: 涉及的卡片
+      description: 角色名或图鉴 id（详情弹窗里能看到）；链接 / 分类译名可留空
+      placeholder: 1024691 / 克维拉的机甲战队
+    validations:
+      required: false
+
+  - type: input
+    id: source
+    attributes:
+      label: 依据
+      description: 游戏内截图、官方简中/繁中公告、其它维基页面链接等
+      placeholder: 游戏内队伍编辑界面截图
+    validations:
+      required: false
+
+  - type: textarea
+    id: note
+    attributes:
+      label: 补充说明
+      description: 若是地区译名分歧（如「薛恩 / 申 / 天星」），请说明你希望采用哪一版
+    validations:
+      required: false

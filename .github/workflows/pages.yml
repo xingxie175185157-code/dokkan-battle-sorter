@@ -1,0 +1,57 @@
+name: Deploy to GitHub Pages
+
+# 把 index.html + roster.js 发布为在线可用的网页版。
+# 首次使用：仓库 Settings → Pages → Build and deployment → Source 选 “GitHub Actions”。
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 组装站点
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 配置 Pages
+        uses: actions/configure-pages@v5
+
+      - name: 组装静态站点
+        run: |
+          set -e
+          mkdir -p _site
+          cp index.html roster.js _site/
+          cp README.md LICENSE NOTICE.md _site/
+          mkdir -p _site/docs && cp docs/banner.svg _site/docs/
+          touch _site/.nojekyll
+          echo "站点内容："
+          ls -la _site
+
+      - name: 上传 Pages 制品
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: 部署
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 部署到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

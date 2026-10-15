@@ -1,0 +1,535 @@
+{
+ "links": [
+  "All in the Family",
+  "Android Assault",
+  "Attack of the Clones",
+  "Auto Regeneration",
+  "Battlefield Diva",
+  "Berserker",
+  "Big Bad Bosses",
+  "Blazing Battle",
+  "Bombardment",
+  "Brainiacs",
+  "Brutal Beatdown",
+  "Budding Warrior",
+  "Champion's Strength",
+  "Cold Judgment",
+  "Connoisseur",
+  "Cooler's Armored Squad",
+  "Cooler's Underling",
+  "Courage",
+  "Coward",
+  "Crane School",
+  "Deficit Boost",
+  "Demonic Power",
+  "Demonic Ways",
+  "Destroyer of the Universe",
+  "Dismal Future",
+  "Dodon Ray",
+  "Energy Absorption",
+  "Evil Autocrats",
+  "Experienced Fighters",
+  "Family Ties",
+  "Fear and Faith",
+  "Fierce Battle",
+  "Flee",
+  "Formidable Enemy",
+  "Fortuneteller Baba’s Fighter",
+  "Frieza's Army",
+  "Frieza's Minion",
+  "Fused Fighter",
+  "Fusion",
+  "Fusion Failure",
+  "GT",
+  "Galactic Visitor",
+  "Galactic Warriors",
+  "Gaze of Respect",
+  "Gentleman",
+  "Godly Power",
+  "Golden Warrior",
+  "Golden Z-Fighter",
+  "Guidance of the Dragon Balls",
+  "Hardened Grudge",
+  "Hatred of Saiyans",
+  "Hero",
+  "Hero of Justice",
+  "High Compatibility",
+  "Infighter",
+  "Infinite Energy",
+  "Infinite Regeneration",
+  "Kamehameha",
+  "Legendary Power",
+  "Limit-Breaking Form",
+  "Loyalty",
+  "Majin",
+  "Majin Resurrection Plan",
+  "Master of Magic",
+  "Mechanical Menaces",
+  "Messenger from the Future",
+  "Metamorphosis",
+  "Money Money Money",
+  "More Than Meets the Eye",
+  "Namekians",
+  "New",
+  "New Frieza Army",
+  "Nightmare",
+  "Organic Upgrade",
+  "Otherworld Warriors",
+  "Over 9000",
+  "Over in a Flash",
+  "Patrol",
+  "Penguin Village Adventure",
+  "Power Bestowed by God",
+  "Prepared for Battle",
+  "Prodigies",
+  "RR Army",
+  "Respect",
+  "Resurrection 'F'",
+  "Revival",
+  "Royal Lineage",
+  "Saiyan Pride",
+  "Saiyan Roar",
+  "Saiyan Warrior Race",
+  "Scientist",
+  "Shadow Dragons",
+  "Shattering the Limit",
+  "Shocking Speed",
+  "Signature Pose",
+  "Solid Support",
+  "Soul vs Soul",
+  "Speedy Retribution",
+  "Strength in Unity",
+  "Strongest Clan in Space",
+  "Super Saiyan",
+  "Super Strike",
+  "Super-God Combat",
+  "Supreme Power",
+  "Supreme Warrior",
+  "Tag Team of Terror",
+  "Team Bardock",
+  "Team Turles",
+  "Telekinesis",
+  "Telepathy",
+  "The First Awakened",
+  "The Ginyu Force",
+  "The Hera Clan",
+  "The Incredible Adventure",
+  "The Innocents",
+  "The Saiyan Lineage",
+  "The Students",
+  "The Wall Standing Tall",
+  "Thirst for Conquest",
+  "Tough as Nails",
+  "Tournament of Power",
+  "Transform",
+  "Turtle School",
+  "Twin Terrors",
+  "Ultimate Lifeform",
+  "Unbreakable Bond",
+  "Universe’s Most Malevolent",
+  "Warrior Gods",
+  "Warriors of Universe 6",
+  "World Tournament Champion",
+  "World Tournament Reborn",
+  "Xenoverse",
+  "Z Fighters"
+ ],
+ "categories": [
+  {
+   "id": "80",
+   "name": "Accelerated Battle"
+  },
+  {
+   "id": "55",
+   "name": "All-Out Struggle"
+  },
+  {
+   "id": "21",
+   "name": "Androids"
+  },
+  {
+   "id": "38",
+   "name": "Androids/Cell Saga"
+  },
+  {
+   "id": "32",
+   "name": "Artificial Life Forms"
+  },
+  {
+   "id": "83",
+   "name": "Battle of Fate"
+  },
+  {
+   "id": "58",
+   "name": "Battle of Wits"
+  },
+  {
+   "id": "79",
+   "name": "Bond of Friendship"
+  },
+  {
+   "id": "40",
+   "name": "Bond of Master and Disciple"
+  },
+  {
+   "id": "87",
+   "name": "Bond of Parent and Child"
+  },
+  {
+   "id": "63",
+   "name": "Connected Hope"
+  },
+  {
+   "id": "64",
+   "name": "Corroded Body and Mind"
+  },
+  {
+   "id": "61",
+   "name": "Crossover"
+  },
+  {
+   "id": "98",
+   "name": "DAIMA"
+  },
+  {
+   "id": "34",
+   "name": "DB Saga"
+  },
+  {
+   "id": "70",
+   "name": "Defenders of Justice"
+  },
+  {
+   "id": "93",
+   "name": "Demonic Power"
+  },
+  {
+   "id": "42",
+   "name": "Dragon Ball Heroes"
+  },
+  {
+   "id": "25",
+   "name": "Dragon Ball Seekers"
+  },
+  {
+   "id": "89",
+   "name": "Earth-Bred Fighters"
+  },
+  {
+   "id": "95",
+   "name": "Earth-Protecting Heroes"
+  },
+  {
+   "id": "51",
+   "name": "Earthlings"
+  },
+  {
+   "id": "81",
+   "name": "Entrusted Will"
+  },
+  {
+   "id": "47",
+   "name": "Exploding Rage"
+  },
+  {
+   "id": "46",
+   "name": "Final Trump Card"
+  },
+  {
+   "id": "20",
+   "name": "Full Power"
+  },
+  {
+   "id": "85",
+   "name": "Fused Fighters"
+  },
+  {
+   "id": "1",
+   "name": "Fusion"
+  },
+  {
+   "id": "19",
+   "name": "Future Saga"
+  },
+  {
+   "id": "60",
+   "name": "Giant Ape Power"
+  },
+  {
+   "id": "13",
+   "name": "Giant Form"
+  },
+  {
+   "id": "68",
+   "name": "Gifted Warriors"
+  },
+  {
+   "id": "15",
+   "name": "Ginyu Force"
+  },
+  {
+   "id": "30",
+   "name": "Goku's Family"
+  },
+  {
+   "id": "99",
+   "name": "Golden Fighters"
+  },
+  {
+   "id": "73",
+   "name": "GT Bosses"
+  },
+  {
+   "id": "72",
+   "name": "GT Heroes"
+  },
+  {
+   "id": "74",
+   "name": "Heavenly Events"
+  },
+  {
+   "id": "5",
+   "name": "Hybrid Saiyans"
+  },
+  {
+   "id": "50",
+   "name": "Inhuman Deeds"
+  },
+  {
+   "id": "28",
+   "name": "Joined Forces"
+  },
+  {
+   "id": "39",
+   "name": "Kamehameha"
+  },
+  {
+   "id": "77",
+   "name": "Legendary Existence"
+  },
+  {
+   "id": "11",
+   "name": "Low-Class Warrior"
+  },
+  {
+   "id": "9",
+   "name": "Majin Buu Saga"
+  },
+  {
+   "id": "53",
+   "name": "Majin Power"
+  },
+  {
+   "id": "76",
+   "name": "Mastered Evolution"
+  },
+  {
+   "id": "66",
+   "name": "Miraculous Awakening"
+  },
+  {
+   "id": "97",
+   "name": "Mission Execution"
+  },
+  {
+   "id": "16",
+   "name": "Movie Bosses"
+  },
+  {
+   "id": "29",
+   "name": "Movie Heroes"
+  },
+  {
+   "id": "18",
+   "name": "Namekians"
+  },
+  {
+   "id": "44",
+   "name": "Otherworld Warriors"
+  },
+  {
+   "id": "4",
+   "name": "Peppy Gals"
+  },
+  {
+   "id": "14",
+   "name": "Planet Namek Saga"
+  },
+  {
+   "id": "69",
+   "name": "Planetary Destruction"
+  },
+  {
+   "id": "10",
+   "name": "Potara"
+  },
+  {
+   "id": "59",
+   "name": "Power Absorption"
+  },
+  {
+   "id": "84",
+   "name": "Power Beyond Super Saiyan"
+  },
+  {
+   "id": "90",
+   "name": "Power of Wishes"
+  },
+  {
+   "id": "67",
+   "name": "Powerful Comeback"
+  },
+  {
+   "id": "17",
+   "name": "Pure Saiyans"
+  },
+  {
+   "id": "54",
+   "name": "Rapid Growth"
+  },
+  {
+   "id": "8",
+   "name": "Realm of Gods"
+  },
+  {
+   "id": "22",
+   "name": "Representatives of Universe 7"
+  },
+  {
+   "id": "7",
+   "name": "Resurrected Warriors"
+  },
+  {
+   "id": "48",
+   "name": "Revenge"
+  },
+  {
+   "id": "86",
+   "name": "Saiyan Saga"
+  },
+  {
+   "id": "57",
+   "name": "Saviors"
+  },
+  {
+   "id": "2",
+   "name": "Shadow Dragon Saga"
+  },
+  {
+   "id": "35",
+   "name": "Siblings' Bond"
+  },
+  {
+   "id": "62",
+   "name": "Space-Traveling Warriors"
+  },
+  {
+   "id": "52",
+   "name": "Special Pose"
+  },
+  {
+   "id": "71",
+   "name": "Storied Figures"
+  },
+  {
+   "id": "96",
+   "name": "Successors"
+  },
+  {
+   "id": "92",
+   "name": "Super Bosses"
+  },
+  {
+   "id": "88",
+   "name": "Super Heroes"
+  },
+  {
+   "id": "45",
+   "name": "Super Saiyan 2"
+  },
+  {
+   "id": "12",
+   "name": "Super Saiyan 3"
+  },
+  {
+   "id": "36",
+   "name": "Super Saiyans"
+  },
+  {
+   "id": "78",
+   "name": "Sworn Enemies"
+  },
+  {
+   "id": "43",
+   "name": "Target: Goku"
+  },
+  {
+   "id": "49",
+   "name": "Team Bardock"
+  },
+  {
+   "id": "41",
+   "name": "Terrifying Conquerors"
+  },
+  {
+   "id": "75",
+   "name": "Time Limit"
+  },
+  {
+   "id": "26",
+   "name": "Time Travelers"
+  },
+  {
+   "id": "91",
+   "name": "Tournament Participants"
+  },
+  {
+   "id": "23",
+   "name": "Transformation Boost"
+  },
+  {
+   "id": "65",
+   "name": "Turtle School"
+  },
+  {
+   "id": "94",
+   "name": "Uncontrollable Power"
+  },
+  {
+   "id": "56",
+   "name": "Universe 11"
+  },
+  {
+   "id": "27",
+   "name": "Universe 6"
+  },
+  {
+   "id": "6",
+   "name": "Universe Survival Saga"
+  },
+  {
+   "id": "31",
+   "name": "Vegeta's Family"
+  },
+  {
+   "id": "24",
+   "name": "Wicked Bloodline"
+  },
+  {
+   "id": "3",
+   "name": "World Tournament"
+  },
+  {
+   "id": "82",
+   "name": "Worldwide Chaos"
+  },
+  {
+   "id": "37",
+   "name": "Worthy Rivals"
+  },
+  {
+   "id": "33",
+   "name": "Youth"
+  }
+ ]
+}

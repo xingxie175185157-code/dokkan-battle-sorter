@@ -1,0 +1,27 @@
+# 统一换行符为 LF，检出到 Windows 时也保持 LF（HTML/JS 均无影响，避免 diff 噪声）
+* text=auto eol=lf
+
+# 明确文本类型
+*.html  text
+*.js    text
+*.mjs   text
+*.json  text
+*.md    text
+*.yml   text
+*.txt   text
+
+# 二进制
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.ico   binary
+
+# 生成物：不参与 GitHub 语言统计、折叠 diff
+roster.js               linguist-generated=true -diff
+data/raw-roster.json    linguist-generated=true
+data/enums-en.json      linguist-generated=true
+data/report.txt         linguist-generated=true
+
+# 文档不计入语言统计
+*.md linguist-documentation=true

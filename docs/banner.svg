@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="340" viewBox="0 0 1200 340" role="img" aria-label="龙珠爆裂大战 · 战斗排序器">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0c0e13"/>
+      <stop offset="1" stop-color="#161d2b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff8a00"/>
+      <stop offset="1" stop-color="#ffc63d"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+    </pattern>
+    <radialGradient id="glow" cx="0.5" cy="1.05" r="0.85">
+      <stop offset="0" stop-color="#ff8a00" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#ff8a00" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="340" fill="url(#bg)"/>
+  <rect width="1200" height="340" fill="url(#grid)"/>
+  <rect width="1200" height="340" fill="url(#glow)"/>
+  <rect x="0" y="0" width="1200" height="4" fill="url(#accent)"/>
+
+  <g font-family="'PingFang SC','Microsoft YaHei','Hiragino Sans GB','Noto Sans CJK SC',system-ui,-apple-system,'Segoe UI',sans-serif">
+
+    <text x="600" y="72" text-anchor="middle" font-size="13" letter-spacing="4.5"
+          fill="#8b95a8" font-weight="600">DRAGON BALL Z · DOKKAN BATTLE</text>
+
+    <text x="600" y="146" text-anchor="middle" font-size="54" font-weight="800"
+          fill="#e9ecf3" letter-spacing="2">龙珠爆裂大战</text>
+
+    <text x="600" y="196" text-anchor="middle" font-size="25" font-weight="700"
+          fill="url(#accent)" letter-spacing="7">战 斗 排 序 器</text>
+
+    <text x="600" y="232" text-anchor="middle" font-size="15.5"
+          fill="#8b95a8">7 人循环槽位推演 · 拖拽改序连锁重算 · 拖到指定回合自动反推前置排序</text>
+
+    <!-- 回合循环示意：123 → 456 → 712 → 345 -->
+    <g>
+      <rect x="322" y="258" width="112" height="46" rx="11"
+            fill="#ff8a00" fill-opacity="0.14" stroke="#ff8a00" stroke-width="1.6"/>
+      <text x="378" y="288" text-anchor="middle" font-size="17" font-weight="700"
+            fill="#ffc63d" letter-spacing="3">1 2 3</text>
+
+      <rect x="470" y="258" width="112" height="46" rx="11"
+            fill="#ffffff" fill-opacity="0.045" stroke="#39435a" stroke-width="1.4"/>
+      <text x="526" y="288" text-anchor="middle" font-size="17" font-weight="700"
+            fill="#c6cddb" letter-spacing="3">4 5 6</text>
+
+      <rect x="618" y="258" width="112" height="46" rx="11"
+            fill="#ffffff" fill-opacity="0.045" stroke="#39435a" stroke-width="1.4"/>
+      <text x="674" y="288" text-anchor="middle" font-size="17" font-weight="700"
+            fill="#c6cddb" letter-spacing="3">7 1 2</text>
+
+      <rect x="766" y="258" width="112" height="46" rx="11"
+            fill="#ffffff" fill-opacity="0.045" stroke="#39435a" stroke-width="1.4"/>
+      <text x="822" y="288" text-anchor="middle" font-size="17" font-weight="700"
+            fill="#c6cddb" letter-spacing="3">3 4 5</text>
+
+      <g stroke="#ff8a00" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.7">
+        <path d="M443 281h9"/><path d="M591 281h9"/><path d="M739 281h9"/>
+      </g>
+      <g fill="#ff8a00" opacity="0.7">
+        <polygon points="452,275 461,281 452,287"/>
+        <polygon points="600,275 609,281 600,287"/>
+        <polygon points="748,275 757,281 748,287"/>
+      </g>
+
+      <text x="1010" y="288" text-anchor="start" font-size="14" fill="#5b6478">…7 回合循环</text>
+    </g>
+  </g>
+</svg>

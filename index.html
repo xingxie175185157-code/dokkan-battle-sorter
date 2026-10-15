@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>龙珠爆裂大战 · 战斗排序器</title>
+<style>
+:root{
+  --bg:#0c0e13;
+  --panel:#151922;
+  --panel2:#1b2130;
+  --line:#2a3142;
+  --line2:#39435a;
+  --text:#e9ecf3;
+  --muted:#8b95a8;
+  --accent:#ff8a00;
+  --accent2:#ffc63d;
+  --ok:#2fbf71;
+  --danger:#e5484d;
+  --radius:14px;
+  --shadow:0 10px 30px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 600px at 12% -10%, rgba(255,138,0,.13), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(79,131,255,.12), transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:14px;
+  line-height:1.5;
+  min-height:100%;
+}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-thumb{background:#2c3549;border-radius:8px;border:2px solid transparent;background-clip:content-box;}
+::-webkit-scrollbar-thumb:hover{background:#3d4a66;background-clip:content-box;}
+::-webkit-scrollbar-track{background:transparent;}
+
+/* ---------- 顶栏 ---------- */
+header{
+  position:sticky;top:0;z-index:50;
+  backdrop-filter:blur(12px);
+  background:linear-gradient(180deg, rgba(12,14,19,.93), rgba(12,14,19,.78));
+  border-bottom:1px solid var(--line);
+}
+.head-inner{
+  max-width:1660px;margin:0 auto;padding:12px 18px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.brand{display:flex;align-items:center;gap:12px;min-width:0;}
+.brand .orb{
+  width:34px;height:34px;border-radius:50%;flex:none;
+  background:radial-gradient(circle at 32% 30%, #fff8e0, #ffb31f 42%, #ff6a00 72%, #b73b00);
+  box-shadow:0 0 18px rgba(255,138,0,.55), inset 0 0 6px rgba(255,255,255,.6);
+}
+.brand h1{
+  margin:0;font-size:17px;letter-spacing:.5px;white-space:nowrap;
+  background:linear-gradient(90deg,#fff,var(--accent2) 55%,var(--accent));
+  -webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800;
+}
+.brand .sub{font-size:11.5px;color:var(--muted);white-space:nowrap;}
+.head-hint{
+  flex:1;min-width:220px;color:var(--muted);font-size:12px;line-height:1.45;
+  border-left:1px solid var(--line);padding-left:16px;
+}
+.head-hint b{color:var(--accent2);font-weight:600;}
+.head-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* ---------- 通用控件 ---------- */
+.btn{
+  border:1px solid var(--line2);background:var(--panel2);color:var(--text);
+  padding:7px 13px;border-radius:9px;cursor:pointer;font-size:12.5px;
+  font-family:inherit;transition:.15s;white-space:nowrap;
+}
+.btn:hover{background:#242c3d;border-color:#4a5670;transform:translateY(-1px);}
+.btn:active{transform:translateY(0);}
+.btn.primary{
+  background:linear-gradient(135deg,var(--accent),#ff6a00);border-color:transparent;
+  color:#1a1000;font-weight:700;
+}
+.btn.primary:hover{background:linear-gradient(135deg,#ffa22e,#ff7b16);}
+.btn.ghost{background:transparent;}
+.btn.danger:hover{border-color:var(--danger);color:#ff9a9d;}
+.btn.sm{padding:4px 9px;font-size:11.5px;border-radius:7px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+input,select,textarea{
+  background:#10141d;border:1px solid var(--line);color:var(--text);
+  border-radius:9px;padding:8px 10px;font-size:12.5px;font-family:inherit;width:100%;
+  transition:.15s;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,138,0,.14);}
+textarea{resize:vertical;line-height:1.5;}
+label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:5px;}
+
+/* ---------- 布局 ---------- */
+main{
+  max-width:1660px;margin:0 auto;padding:16px 18px 60px;
+  display:grid;grid-template-columns:322px minmax(0,1fr) 268px;gap:16px;align-items:start;
+}
+.panel{
+  background:linear-gradient(180deg,var(--panel),#12161e);
+  border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.panel-head{
+  padding:12px 14px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  background:linear-gradient(180deg,rgba(255,138,0,.07),transparent);
+}
+.panel-head h2{margin:0;font-size:13.5px;font-weight:700;letter-spacing:.4px;}
+.panel-head .count{
+  font-size:11px;color:var(--muted);background:#10141d;border:1px solid var(--line);
+  padding:2px 8px;border-radius:20px;
+}
+.panel-body{padding:12px 14px;}
+.scroll{max-height:calc(100vh - 260px);overflow-y:auto;}
+
+/* ---------- 预设库 ---------- */
+.lib-tools{display:flex;gap:8px;margin-bottom:10px;}
+.lib-search{position:relative;flex:1;}
+.type-filter{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.chip-filter{
+  border:1px solid var(--line);background:#10141d;color:var(--muted);
+  border-radius:20px;padding:3px 10px;font-size:11px;cursor:pointer;transition:.15s;
+}
+.chip-filter:hover{border-color:var(--line2);color:var(--text);}
+.chip-filter.on{background:rgba(255,138,0,.16);border-color:var(--accent);color:var(--accent2);font-weight:600;}
+
+.preset-list{display:flex;flex-direction:column;gap:6px;}
+.preset-item{
+  display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:10px;
+  background:#11151d;border:1px solid var(--line);transition:.15s;cursor:pointer;
+  position:relative;
+}
+.preset-item:hover{border-color:var(--line2);background:#161c27;transform:translateX(2px);}
+.preset-item .dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 8px currentColor;}
+.preset-item .nm{flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.preset-item .meta{font-size:10px;color:var(--muted);padding:1px 6px;border:1px solid var(--line);border-radius:5px;flex:none;}
+.preset-item .ops{display:flex;gap:3px;opacity:.3;transition:.15s;flex:none;}
+.preset-item:hover .ops{opacity:1;}
+/* 「我的」已收藏 → 实心星常亮高亮 */
+.preset-item.kept .ops{opacity:1;}
+.preset-item .icon-btn.kept{
+  color:#f5b301;border-color:rgba(245,179,1,.55);background:rgba(245,179,1,.14);
+  box-shadow:0 0 10px rgba(245,179,1,.22);
+}
+.preset-item .icon-btn.kept:hover{background:rgba(245,179,1,.24);color:#ffd76a;}
+.icon-btn{
+  border:none;background:transparent;color:var(--muted);cursor:pointer;
+  padding:3px 5px;border-radius:6px;font-size:12px;line-height:1;transition:.15s;
+}
+.icon-btn:hover{background:#242c3d;color:var(--text);}
+.icon-btn.del:hover{color:#ff9a9d;}
+.empty-tip{color:var(--muted);font-size:12px;text-align:center;padding:22px 8px;line-height:1.7;}
+
+/* ---------- 队伍 ---------- */
+.team-grid{
+  display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:9px;
+}
+.team-slot{
+  border:1px dashed var(--line2);border-radius:11px;background:#10141d;
+  padding:10px 8px;text-align:center;min-height:76px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  transition:.15s;cursor:grab;position:relative;
+}
+.team-slot.filled{
+  border-style:solid;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,0));
+}
+.team-slot:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,138,0,.1);}
+.team-slot.dragging{opacity:.35;}
+.team-slot.over{border-color:var(--accent2);background:rgba(255,198,61,.1);}
+.team-slot .idx{
+  position:absolute;top:4px;left:6px;font-size:10px;color:var(--muted);font-weight:700;
+}
+.team-slot .rm{
+  position:absolute;top:2px;right:3px;opacity:0;transition:.15s;
+}
+.team-slot:hover .rm{opacity:1;}
+.team-slot .nm{font-size:12px;font-weight:600;line-height:1.25;word-break:break-all;padding:0 2px;}
+.team-slot .tp{font-size:10px;padding:1px 6px;border-radius:5px;font-weight:700;}
+.slot-ph{color:#4d5871;font-size:11.5px;}
+
+/* ---------- 控制条 ---------- */
+.controls{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:11px 14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  background:#11151d;
+}
+.controls .grp{display:flex;align-items:center;gap:7px;}
+.controls .grp>span{font-size:12px;color:var(--muted);white-space:nowrap;}
+.controls input[type=number]{width:74px;text-align:center;}
+.divider{width:1px;height:20px;background:var(--line);}
+
+/* ---------- 牌序条 ---------- */
+.deck-strip{display:flex;gap:6px;padding:11px 14px;flex-wrap:wrap;align-items:center;}
+.deck-strip .lab{font-size:11.5px;color:var(--muted);margin-right:2px;}
+.chip{
+  display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;
+  background:#10141d;border:1px solid var(--line);font-size:11.5px;transition:.18s;
+}
+.chip .n{color:var(--muted);font-size:10px;font-weight:700;}
+.chip.hi{border-color:var(--accent);background:rgba(255,138,0,.16);transform:translateY(-2px) scale(1.04);}
+.chip.hi .n{color:var(--accent2);}
+.chip{cursor:grab;}
+.chip.dragging{opacity:.4;}
+.preset-item{cursor:grab;}
+.preset-item.dragging{opacity:.4;}
+
+/* ---------- 回合列表 ---------- */
+.turns-wrap{padding:6px 14px 16px;}
+.turn{
+  border:1px solid var(--line);border-radius:12px;background:#11151d;
+  padding:10px 12px 12px;margin-top:10px;transition:.18s;
+}
+.turn:hover{border-color:var(--line2);}
+.turn.focus{border-color:rgba(255,138,0,.55);box-shadow:0 0 0 3px rgba(255,138,0,.08);}
+.turn-head{display:flex;align-items:center;gap:10px;margin-bottom:9px;flex-wrap:wrap;}
+.turn-no{
+  font-size:12.5px;font-weight:800;letter-spacing:.6px;color:var(--accent2);
+  display:flex;align-items:center;gap:7px;
+}
+.turn-no .bar{width:3px;height:13px;background:linear-gradient(180deg,var(--accent2),var(--accent));border-radius:2px;}
+.turn-slots{font-size:11px;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace;}
+.turn-slots b{color:#b9c3d6;}
+.turn-tag{
+  font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:1px 6px;
+}
+.turn-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+
+.card{
+  position:relative;border-radius:11px;padding:10px 11px 10px 13px;
+  background:linear-gradient(100deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+  border:1px solid var(--line);cursor:grab;transition:.15s;overflow:hidden;
+  display:flex;flex-direction:column;gap:7px;min-height:78px;
+}
+.card::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c,#7b8494);
+  box-shadow:0 0 12px var(--c,#7b8494);
+}
+.card:hover{border-color:var(--line2);transform:translateY(-2px);box-shadow:0 8px 18px rgba(0,0,0,.35);}
+.card.dragging{opacity:.35;cursor:grabbing;}
+.card.over{border-color:var(--accent2);background:rgba(255,198,61,.12);transform:scale(1.01);}
+/* 拖拽落点：可行 / 不可行 */
+.card.drop-ok{border-color:var(--accent2);background:rgba(255,198,61,.14);transform:scale(1.02);
+  box-shadow:0 0 0 2px rgba(255,198,61,.28),0 8px 18px rgba(0,0,0,.4);}
+.card.drop-bad{border-color:var(--danger);background:rgba(229,72,77,.12);}
+.card.drop-bad::after{
+  content:"不可行";position:absolute;right:6px;bottom:5px;font-size:10px;font-weight:700;
+  color:#ff9a9d;letter-spacing:.5px;
+}
+/* 反推结果的标记徽标 */
+.card.auto-fix::before{background:var(--accent2);box-shadow:0 0 14px var(--accent2);}
+.card .auto-tag{
+  position:absolute;left:0;right:0;top:0;text-align:center;
+  font-size:9px;font-weight:800;letter-spacing:.6px;
+  background:var(--accent2);color:#0c0e13;padding:2px 0;
+}
+.card.auto-fix, .card.target-hit{padding-top:19px;}
+.card.target-hit{
+  border-color:var(--ok);box-shadow:0 0 0 2px rgba(47,191,113,.35),0 0 20px rgba(47,191,113,.25);
+}
+.card .top{display:flex;align-items:center;gap:6px;justify-content:space-between;}
+.card .slot-lab{
+  font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--line);
+  border-radius:5px;padding:1px 6px;font-family:ui-monospace,Menlo,Consolas,monospace;
+}
+.card .ty{font-size:10px;font-weight:800;padding:1px 7px;border-radius:5px;color:#0c0e13;}
+.card .nm{font-size:13px;font-weight:700;word-break:break-all;line-height:1.3;}
+.card .nudge{
+  display:flex;gap:4px;margin-left:auto;
+}
+.card .mini{
+  border:1px solid var(--line);background:#10141d;color:var(--muted);
+  border-radius:6px;font-size:10px;line-height:1;padding:3px 6px;cursor:pointer;transition:.15s;
+}
+.card .mini:hover{color:var(--accent2);border-color:var(--accent);}
+.card .mini:disabled{opacity:.28;cursor:not-allowed;}
+.card .mini:disabled:hover{color:var(--muted);border-color:var(--line);}
+
+/* ---------- 汇总 ---------- */
+.sum-row{
+  display:flex;align-items:flex-start;gap:9px;padding:7px 0;border-bottom:1px dashed var(--line);
+  font-size:12px;
+}
+.sum-row:last-child{border-bottom:none;}
+.sum-row .dot{width:8px;height:8px;border-radius:50%;flex:none;margin-top:5px;box-shadow:0 0 8px currentColor;}
+.sum-row .nm{flex:1;min-width:0;word-break:break-all;}
+.sum-row .tn{font-size:10.5px;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace;text-align:right;line-height:1.45;}
+.legend{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px;border-top:1px solid var(--line);}
+.legend span{font-size:10.5px;display:flex;align-items:center;gap:4px;color:var(--muted);}
+.legend i{width:8px;height:8px;border-radius:50%;display:inline-block;}
+
+/* ---------- 图鉴（头像 / 标签 / 详情） ---------- */
+.avatar{
+  width:38px;height:38px;border-radius:9px;flex:none;
+  object-fit:cover;object-position:50% 18%;
+  background:#0a0d13;border:1px solid var(--line);display:block;
+}
+.avatar.lg{width:104px;height:104px;border-radius:13px;}
+.avatar.xs{width:26px;height:26px;border-radius:7px;}
+
+.lib-tabs{display:flex;gap:6px;padding:10px 14px 0;}
+.lib-tab{
+  flex:1;border:1px solid var(--line);background:#10141d;color:var(--muted);
+  border-radius:9px;padding:7px 8px;font-size:12px;cursor:pointer;
+  font-family:inherit;transition:.15s;white-space:nowrap;
+}
+.lib-tab:hover{border-color:var(--line2);color:var(--text);}
+.lib-tab.on{background:rgba(255,138,0,.15);border-color:var(--accent);color:var(--accent2);font-weight:700;}
+.lib-tab i{font-style:normal;opacity:.62;font-size:10.5px;}
+
+.preset-item .names{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+.preset-item .nm{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.preset-item .en{font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.preset-item .lock{font-size:10px;color:var(--muted);flex:none;opacity:.7;}
+
+.card .cbody{display:flex;align-items:center;gap:9px;}
+.card .cbody .info{min-width:0;flex:1;}
+.card .sub{font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;}
+.team-slot .avatar{width:42px;height:42px;margin-top:2px;}
+
+.tagbox{display:flex;flex-wrap:wrap;gap:6px;}
+.tag{
+  font-size:11px;padding:3px 9px;border-radius:20px;
+  background:#10141d;border:1px solid var(--line);color:#c3ccdd;
+}
+.tag.link{border-color:rgba(79,131,255,.45);background:rgba(79,131,255,.1);color:#a8c3ff;}
+.tag.cat{border-color:rgba(255,138,0,.42);background:rgba(255,138,0,.1);color:#ffcb85;}
+
+.detail-head{display:flex;gap:15px;padding:16px 18px;border-bottom:1px solid var(--line);align-items:flex-start;}
+.detail-head .d-name{font-size:16px;font-weight:800;line-height:1.35;}
+.detail-head .d-en{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4;}
+.detail-head .d-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.badge{font-size:10.5px;padding:2px 8px;border-radius:6px;border:1px solid var(--line);color:var(--muted);}
+.badge.ty{color:#0c0e13;font-weight:800;border:none;}
+
+/* ---------- 弹窗 ---------- */
+.mask{
+  position:fixed;inset:0;background:rgba(4,6,10,.72);backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;z-index:200;padding:20px;
+}
+.mask.on{display:flex;}
+.modal{
+  background:var(--panel);border:1px solid var(--line2);border-radius:16px;
+  width:100%;max-width:470px;box-shadow:0 24px 60px rgba(0,0,0,.6);overflow:hidden;
+  animation:pop .16s ease-out;
+}
+.modal.wide{max-width:620px;}
+@keyframes pop{from{transform:scale(.96);opacity:0;}to{transform:scale(1);opacity:1;}}
+.modal h3{margin:0;padding:15px 18px;font-size:14.5px;border-bottom:1px solid var(--line);}
+.modal .mbody{padding:16px 18px;max-height:66vh;overflow-y:auto;}
+.field{margin-bottom:12px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.modal-actions{
+  padding:13px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:9px;
+  background:#11151d;
+}
+.hint{
+  font-size:11.5px;color:var(--muted);line-height:1.65;background:#10141d;
+  border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+}
+.hint code{
+  background:#1c2231;padding:1px 5px;border-radius:4px;font-size:11px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--accent2);
+}
+
+/* ---------- Toast ---------- */
+#toast{
+  position:fixed;left:50%;bottom:34px;transform:translate(-50%,20px);
+  background:#1d2430;border:1px solid var(--line2);color:var(--text);
+  padding:10px 20px;border-radius:11px;font-size:12.5px;z-index:300;opacity:0;
+  transition:.24s;pointer-events:none;box-shadow:var(--shadow);
+}
+#toast.on{opacity:1;transform:translate(-50%,0);}
+
+/* ---------- 拖拽实时提示 ---------- */
+#dragHint{
+  position:fixed;left:50%;bottom:76px;transform:translate(-50%,10px);
+  background:#151b26;border:1px solid var(--accent);color:var(--text);
+  padding:9px 16px;border-radius:10px;font-size:12.5px;line-height:1.55;
+  max-width:min(760px,92vw);z-index:290;opacity:0;transition:.16s;
+  pointer-events:none;box-shadow:0 12px 30px rgba(0,0,0,.55);
+}
+#dragHint.on{opacity:1;transform:translate(-50%,0);}
+#dragHint.bad{border-color:var(--danger);}
+#dragHint .ttl{font-weight:700;color:var(--accent2);}
+#dragHint.bad .ttl{color:#ff9a9d;}
+#dragHint .slots{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--accent2);}
+#dragHint.bad .slots{color:#ff9a9d;}
+#dragHint .sub{color:var(--muted);font-size:11.5px;}
+
+@media (max-width:1180px){
+  main{grid-template-columns:300px minmax(0,1fr);}
+  main>.summary-col{grid-column:1/-1;}
+  .scroll{max-height:none;}
+}
+@media (max-width:820px){
+  main{grid-template-columns:1fr;padding:12px;}
+  .team-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
+  .turn-cards{grid-template-columns:1fr;}
+  .head-hint{display:none;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-inner">
+    <div class="brand">
+      <div class="orb"></div>
+      <div>
+        <h1>战斗排序器 · Battle Sorter</h1>
+        <div class="sub">龙珠爆裂大战 · 7人队伍回合顺序推演</div>
+      </div>
+    </div>
+    <div class="head-hint">
+      7 人循环规则：每回合取<b>连续 3 个槽位</b>上场，起始槽位每回合后移 3 格 →
+      <b>1-2-3 → 4-5-6 → 7-1-2 → 3-4-5 → 6-7-1 …</b>
+      拖动卡片可交换本回合三人的槽位，<b>之后的回合会自动重算</b>。<br>
+      想把某人排进某一回合？<b>把左侧图鉴里的角色直接拖到那一格</b>，
+      会自动反推需要的前置排序；排不出来时会提示原因并拒绝放置。
+      <b>队伍初始顺序</b>里的角色、以及「当前牌序」条上的角色同样可以拖。
+    </div>
+    <div class="head-actions">
+      <button class="btn" id="btnLang" title="切换角色名显示语言">中文</button>
+      <button class="btn ghost" id="btnHelp">说明 / 扩展</button>
+      <button class="btn" id="btnExportPresets">导出预设库</button>
+      <button class="btn" id="btnImportPresets">导入预设库</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ============ 左：预设库 ============ -->
+  <aside class="panel">
+    <div class="panel-head">
+      <h2>角色库</h2>
+      <span class="count" id="presetCount">—</span>
+    </div>
+    <div class="lib-tabs" id="libTabs">
+      <button class="lib-tab on" data-tab="roster">图鉴 <i id="rosterCount">…</i></button>
+      <button class="lib-tab" data-tab="mine">我的 <i id="mineCount">0</i></button>
+    </div>
+    <div class="panel-body" style="padding-bottom:8px;padding-top:10px;">
+      <div class="lib-tools">
+        <div class="lib-search">
+          <input id="search" placeholder="搜索中文名 / 英文名 / 链接 / 分类…">
+        </div>
+        <button class="btn primary" id="btnAddChar">＋ 自建</button>
+      </div>
+      <div class="type-filter" id="typeFilter"></div>
+      <div class="type-filter" id="rarityFilter" style="margin-top:6px;"></div>
+    </div>
+    <div class="panel-body scroll" style="padding-top:0;">
+      <div class="preset-list" id="presetList"></div>
+      <div class="empty-tip" id="rosterTip" style="display:none;">
+        未找到全角色图鉴文件 <code>roster.js</code><br>
+        把它和 index.html 放在同一目录后
+        <button class="btn sm" id="btnRetryRoster" style="margin-top:8px;">重新载入</button>
+      </div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </aside>
+
+  <!-- ============ 中：队伍 + 回合 ============ -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>队伍初始顺序（1 → 7）</h2>
+      <div style="display:flex;gap:7px;">
+        <button class="btn sm" id="btnShuffle">🎲 随机排序</button>
+        <button class="btn sm" id="btnAutoFill">从预设自动填满</button>
+        <button class="btn sm danger ghost" id="btnClearTeam">清空</button>
+      </div>
+    </div>
+
+    <div class="panel-body">
+      <div class="team-grid" id="teamGrid"></div>
+      <div style="margin-top:9px;font-size:11.5px;color:var(--muted);">
+        提示：在队伍里拖动可直接交换初始槽位（会按新顺序重新推演全部回合）；点角色可从库中移除。
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="grp">
+        <span>计算回合数</span>
+        <input type="number" id="turnCount" min="1" max="999" value="5">
+        <button class="btn sm" id="btnApplyCount">应用</button>
+      </div>
+      <div class="divider"></div>
+      <div class="grp">
+        <span>继续向下计算</span>
+        <button class="btn sm" id="btnPlus1">＋1 回合</button>
+        <button class="btn sm" id="btnPlus5">＋5 回合</button>
+        <button class="btn sm" id="btnPlus10">＋10 回合</button>
+      </div>
+      <div class="divider"></div>
+      <div class="grp">
+        <button class="btn sm" id="btnReset">↺ 还原（清除手动调整）</button>
+        <button class="btn sm" id="btnCopyPlan">📋 复制排程</button>
+      </div>
+    </div>
+
+    <div class="deck-strip" id="deckStrip"></div>
+
+    <div class="turns-wrap" id="turns"></div>
+  </section>
+
+  <!-- ============ 右：汇总 ============ -->
+  <aside class="panel summary-col">
+    <div class="panel-head">
+      <h2>出场回合汇总</h2>
+      <span class="count" id="roundInfo">—</span>
+    </div>
+    <div class="panel-body" id="summary"></div>
+  </aside>
+</main>
+
+<!-- ============ 角色编辑弹窗 ============ -->
+<div class="mask" id="maskChar">
+  <div class="modal">
+    <h3 id="charModalTitle">新增角色</h3>
+    <div class="mbody">
+      <div class="field">
+        <label>角色名称 *</label>
+        <input id="fName" placeholder="例如：孙悟空（超4）">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>属性</label>
+          <select id="fType"></select>
+        </div>
+        <div class="field">
+          <label>稀有度 / 类型</label>
+          <input id="fRarity" placeholder="LR / UR / SSR">
+        </div>
+      </div>
+      <div class="field">
+        <label>标签（逗号分隔）</label>
+        <input id="fTags" placeholder="超赛, 联合战, 优先生存">
+      </div>
+      <div class="field">
+        <label>备注</label>
+        <textarea id="fNote" rows="2" placeholder="被动、联动、出场要求…"></textarea>
+      </div>
+      <div class="hint">
+        保存后会自动进入左侧预设库，可在任意组合中重复选用。数据保存在本机浏览器（localStorage）。
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="charCancel">取消</button>
+      <button class="btn primary" id="charSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 角色详情弹窗 ============ -->
+<div class="mask" id="maskDetail">
+  <div class="modal wide">
+    <div class="detail-head">
+      <img class="avatar lg" id="dAvatar" alt="">
+      <div style="min-width:0;flex:1;">
+        <div class="d-name" id="dName">—</div>
+        <div class="d-en" id="dEn"></div>
+        <div class="d-badges" id="dBadges"></div>
+      </div>
+    </div>
+    <div class="mbody">
+      <div class="field">
+        <label>链接技能 · Link Skills</label>
+        <div class="tagbox" id="dLinks"></div>
+      </div>
+      <div class="field">
+        <label>分类 · Categories</label>
+        <div class="tagbox" id="dCats"></div>
+      </div>
+      <div class="field" id="dTitleWrap">
+        <label>称号 · Title</label>
+        <div id="dTitle" style="font-size:12.5px;color:#c3ccdd;"></div>
+      </div>
+      <div class="hint" id="dSource"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="detailClose">关闭</button>
+      <button class="btn" id="detailAddTeam">加入队伍空位</button>
+      <button class="btn primary" id="detailSaveMine">收藏到「我的」</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Wiki / 批量导入弹窗 ============ -->
+<div class="mask" id="maskWiki">
+  <div class="modal wide">
+    <h3>批量导入角色（Wiki 扩展位 / JSON）</h3>
+    <div class="mbody">
+      <div class="hint" style="margin-bottom:14px;">
+        粘贴 JSON 数组即可批量入库，同名角色自动跳过。后续接入 Wiki 抓取时，只需把抓到的数据整理成同样结构：<br><br>
+        <code>[{ "name":"孙悟空（超4）", "type":"str", "rarity":"LR", "tags":["超赛"], "note":"…", "image":"https://…" }]</code><br><br>
+        type 取值：<code>str</code> 力 / <code>agl</code> 速 / <code>teq</code> 技 / <code>int</code> 知 / <code>phy</code> 体 / <code>none</code> 无。<br>
+        另已暴露全局接口 <code>window.DokkanSorter</code>：<code>addPresets(arr)</code>、<code>getPresets()</code>、<code>setTeamByIds()</code>、<code>getState()</code>，
+        可在控制台或外部脚本中直接调用。
+      </div>
+      <div class="field">
+        <label>JSON 数据</label>
+        <textarea id="wikiJson" rows="12" placeholder='[{ "name":"孙悟空（超4）", "type":"str", "rarity":"LR" }]'></textarea>
+      </div>
+      <div class="field">
+        <label>或选择本地 JSON 文件</label>
+        <input type="file" id="wikiFile" accept=".json,application/json">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="wikiCancel">关闭</button>
+      <button class="btn primary" id="wikiImport">导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 说明弹窗 ============ -->
+<div class="mask" id="maskHelp">
+  <div class="modal wide">
+    <h3>使用说明 / 规则与扩展</h3>
+    <div class="mbody">
+      <div class="hint" style="line-height:1.85;">
+        <b style="color:var(--accent2)">一、排序规则</b><br>
+        队伍固定 7 个槽位（1~7）。每回合取从「起始槽位」开始的连续 3 个槽位上场，起始槽位每回合向后移动 3 格并循环：<br>
+        第 1 回合 1-2-3 → 第 2 回合 4-5-6 → 第 3 回合 7-1-2 → 第 4 回合 3-4-5 → 第 5 回合 6-7-1 → …<br><br>
+        <b style="color:var(--accent2)">二、交换与连锁影响</b><br>
+        把本回合的 3 张卡拖动到另一张卡上，即交换这两人的<b>槽位归属</b>。因为角色是绑定在槽位上的，
+        被交换的槽位在后续回合再次上场时，带出的就是交换后的角色 —— 所以任何一次调整都会向下重算该回合之后的全部回合。<br><br>
+        <b style="color:var(--accent2)">三、回合数</b><br>
+        默认自动推演 5 回合；可输入任意数字后点「应用」，或用 ＋1 / ＋5 / ＋10 持续向下延伸。已生成回合在延伸时不会被重置。<br><br>
+        <b style="color:var(--accent2)">四、把角色排进指定回合（自动反推前置）</b><br>
+        从<b>左侧图鉴</b>、<b>队伍初始顺序</b>、<b>「当前牌序」条</b>或<b>其他回合</b>里，把一张卡拖到某个回合的某一格上。
+        程序会倒推：为了让这个角色在第 T 回合站上这个位置，前面的回合分别需要怎么排 —— 并且<b>尽量把改动推迟到最靠后的回合</b>，
+        能不动前面的排布就不动。执行后，被自动调整的格子会标「前置调整」，目标格标「目标位」。<br>
+        如果做不到（比如第 1 回合只能动槽位 1-2-3，根本够不到第 2 回合的 4-5-6），
+        拖拽会显示<b>禁止光标</b>并说明原因：它会告诉你这个角色在该回合开始前只可能出现在哪几个槽位。<br><br>
+        <b style="color:var(--accent2)">五、预设库与图鉴</b><br>
+        内置 1458 张卡（中文名 / 属性 / 链接技能 / 分类 / 头像），可按属性、稀有度筛选或搜索。
+        点图鉴卡右上角的 <b>☆</b> 收藏进「我的」，已收藏的会变成高亮的 <b>★</b>（再点一次取消）。
+        自建角色与收藏都保存在浏览器本地，可用「导出预设库 / 导入预设库」备份迁移。<br>
+        数据来源：<b>DOKKAN.FYI</b>（社区数据库，robots.txt / llms.txt 允许引用）。链接技能与分类为官方繁中译名转简体，
+        角色名由术语表逐词对照生成，可能与游戏内文本有出入；卡面称号保留英文原文。<br><br>
+        <b style="color:var(--accent2)">六、批量导入</b><br>
+        点顶部「导入预设库」→ 粘贴符合结构的 JSON 数组即可批量入库
+        （字段：name / nameEn / title / type / typeEn / rarity / cls / tags / note / image / links / cats / released / sourceUrl）。
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn primary" id="helpClose">知道了</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="filePresets" accept=".json,application/json" hidden>
+<div id="toast"></div>
+<div id="dragHint"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* =======================================================
+   常量
+   ======================================================= */
+var SLOTS = 7;
+var TYPES = {
+  str : {name:'力', color:'#e5484d'},
+  agl : {name:'速', color:'#4f83ff'},
+  teq : {name:'技', color:'#2fbf71'},
+  int : {name:'知', color:'#a855f7'},
+  phy : {name:'体', color:'#f59e0b'},
+  none: {name:'无', color:'#7b8494'}
+};
+var TYPE_ORDER = ['str','agl','teq','int','phy','none'];
+var LS_PRESETS = 'dbs_sorter_presets_v1';
+var LS_STATE   = 'dbs_sorter_state_v1';
+var LS_SEEDED  = 'dbs_sorter_seeded_v1';
+var DEFAULT_TURNS = 5;
+
+/* =======================================================
+   状态
+   ======================================================= */
+var presets = [];
+var state = {
+  team : new Array(SLOTS).fill(null),   // 初始顺序（槽位 1..7 的角色 id）
+  deck : new Array(SLOTS).fill(null),   // 当前牌序（对外推演的唯一依据）
+  turns: [],                            // 每回合快照：[[id,id,id], ...]
+  turnCount: DEFAULT_TURNS
+};
+var dragSrc = null;
+var dragHintCache = null;              // 拖拽悬停时缓存的试算结果
+var autoMarks = null;                  // 反推结果高亮 { steps:{turn:slot}, target:{turn,pos} }
+var editingId = null;
+var searchText = '';
+var typeFilter = 'all';
+var rarityFilter = 'all';
+
+/* =======================================================
+   工具函数
+   ======================================================= */
+function $(sel, root){ return (root||document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
+function uid(){ return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function typeOf(k){ return TYPES[k] || TYPES.none; }
+function byId(id){ if(!id) return null; for(var i=0;i<presets.length;i++){ if(presets[i].id===id) return presets[i]; } return null; }
+
+/* =======================================================
+   角色统一解析
+   键格式： "r:<图鉴id>" = 全角色图鉴卡   "p:<自建id>" = 「我的」自建卡
+   （旧数据里没有前缀的裸 id 视为自建卡，保证向后兼容）
+   ======================================================= */
+var roster = [];            // 由 roster.js 注入的原始二维数组
+var rosterMeta = { links: [], cats: [] };   // 链接技能 / 分类的中文索引表
+var rosterReady = false;
+var rosterLoadTried = false;
+var nameMode = 'zh';        // zh | en | both
+var libTab = 'roster';      // roster | mine
+
+function thumbUrl(imgId){
+  return 'https://cdn.dokkan.fyi/assets/en/character/thumb/card_' + imgId +
+         '_thumb/card_' + imgId + '_thumb.png';
+}
+function rosterCard(row){
+  return {
+    key:'r:' + row[0], id:String(row[0]),
+    name: row[1] || row[2] || '', nameEn: row[2] || '', title: row[3] || '',
+    rarity: row[4] || '', cls: row[5] || '', typeEn: row[6] || '', type: row[7] || 'none',
+    img: row[8] ? thumbUrl(row[8]) : '',
+    links: (row[9] || []).map(function(i){ return rosterMeta.links[i]; }).filter(Boolean),
+    cats:  (row[10] || []).map(function(i){ return rosterMeta.cats[i]; }).filter(Boolean),
+    released: row[11] || '',
+    note:'', tags:[], isMine:false,
+    sourceUrl:'https://dokkan.fyi/characters/' + row[0]
+  };
+}
+function presetCard(p){
+  return {
+    key:'p:' + p.id, id:p.id,
+    name:p.name, nameEn:p.nameEn || '', title:p.title || '',
+    rarity:p.rarity || '', cls:p.cls || '', typeEn:p.typeEn || '', type:p.type || 'none',
+    img:p.image || '', links:p.links || [], cats:p.cats || [], released:p.released || '',
+    note:p.note || '', tags:p.tags || [], isMine:true, sourceUrl:p.sourceUrl || ''
+  };
+}
+function resolve(key){
+  if(!key) return null;
+  var s = String(key);
+  if(s.indexOf('r:') === 0){
+    var id = s.slice(2);
+    for(var i=0;i<roster.length;i++){ if(String(roster[i][0]) === id) return rosterCard(roster[i]); }
+    return null;
+  }
+  var p = byId(s.indexOf('p:') === 0 ? s.slice(2) : s);
+  return p ? presetCard(p) : null;
+}
+function nameOf(key){ var c = resolve(key); return c ? c.name : '（已移除）'; }
+function typeKeyOf(key){ var c = resolve(key); return c ? c.type : 'none'; }
+/* 按当前语言偏好显示名字 */
+function dispName(c){
+  if(!c) return '（空位）';
+  if(nameMode === 'en') return c.nameEn || c.name;
+  if(nameMode === 'both' && c.nameEn && c.nameEn !== c.name) return c.name + ' · ' + c.nameEn;
+  return c.name || c.nameEn || '（空位）';
+}
+// 副行：纯中文模式不显示（英文名/称号改在详情弹窗中查看）
+function subLine(c){
+  if(!c || nameMode === 'zh') return '';
+  var en = (nameMode === 'both' && c.nameEn && c.nameEn !== c.name) ? c.nameEn : '';
+  var ti = c.title || '';
+  if(en && ti) return en + ' · ' + ti;
+  return en || ti;
+}
+function imgHTML(c, cls){
+  if(!c || !c.img) return '';
+  return '<img class="avatar ' + (cls||'') + '" loading="lazy" alt="" src="' + esc(c.img) + '" ' +
+         'onerror="this.style.visibility=\'hidden\'">';
+}
+
+/* 第 t 回合（0-based）的起始槽位与三槽索引 */
+function startSlot(t){ return (3*t) % SLOTS; }
+function slotsOf(t){ var s = startSlot(t); return [s, (s+1)%SLOTS, (s+2)%SLOTS]; }
+function slotLabels(t){ return slotsOf(t).map(function(i){ return i+1; }); }
+
+function toast(msg){
+  var el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.classList.remove('on'); }, 2100);
+}
+
+/* =======================================================
+   持久化
+   ======================================================= */
+function save(){
+  try{
+    localStorage.setItem(LS_PRESETS, JSON.stringify(presets));
+    localStorage.setItem(LS_STATE, JSON.stringify({
+      team: state.team, deck: state.deck, turns: state.turns,
+      turnCount: state.turnCount
+    }));
+  }catch(e){ /* 隐私模式等场景忽略 */ }
+}
+function fixArr(a){
+  var out = new Array(SLOTS).fill(null);
+  if(Array.isArray(a)){ for(var i=0;i<SLOTS;i++){ out[i] = (typeof a[i]==='string' && a[i]) ? a[i] : null; } }
+  return out;
+}
+function load(){
+  try{
+    var p = JSON.parse(localStorage.getItem(LS_PRESETS) || 'null');
+    if(Array.isArray(p)) presets = p;
+  }catch(e){}
+  try{
+    var s = JSON.parse(localStorage.getItem(LS_STATE) || 'null');
+    if(s && typeof s === 'object'){
+      state.team = fixArr(s.team);
+      state.deck = fixArr(s.deck);
+      state.turns = Array.isArray(s.turns) ? s.turns.map(function(r){ return Array.isArray(r)?r.slice(0,3):[null,null,null]; }) : [];
+      state.turnCount = Math.max(1, parseInt(s.turnCount,10) || DEFAULT_TURNS);
+    }
+  }catch(e){}
+  // 首次打开才注入示例角色；用户把示例删光后不会再自动「长回来」
+  try{
+    if(!presets.length && !localStorage.getItem(LS_SEEDED)){
+      presets = seedPresets();
+      localStorage.setItem(LS_SEEDED, '1');
+    }
+  }catch(e){
+    if(!presets.length) presets = seedPresets();
+  }
+  if(!state.turns.length) rebuild(true);
+}
+function seedPresets(){
+  var seed = [
+    ['孙悟空',     'str', 'LR'],
+    ['贝吉塔',     'teq', 'LR'],
+    ['孙悟饭',     'int', 'UR'],
+    ['比克',       'agl', 'UR'],
+    ['特兰克斯',   'phy', 'UR'],
+    ['克林',       'str', 'UR'],
+    ['天津饭',     'teq', 'SSR'],
+    ['弗利萨',     'int', 'LR'],
+    ['沙鲁',       'agl', 'UR'],
+    ['魔人布欧',   'phy', 'UR']
+  ];
+  return seed.map(function(r, i){
+    return { id:'seed'+i, name:r[0], type:r[1], rarity:r[2], tags:['示例'], note:'', image:'', source:'builtin' };
+  });
+}
+
+/* =======================================================
+   排序引擎
+   ======================================================= */
+/* 从初始顺序重建（清除所有手动调整） */
+function rebuild(silent){
+  state.deck = state.team.slice();
+  state.turns = [];
+  ensureTurns(state.turnCount);
+  if(!silent){ save(); renderAll(); }
+}
+/* 向后补足回合（依据当前 deck，不影响已生成回合） */
+function ensureTurns(n){
+  n = Math.max(1, Math.min(999, n|0));
+  for(var t = state.turns.length; t < n; t++){
+    var sl = slotsOf(t);
+    state.turns.push(sl.map(function(s){ return state.deck[s] || null; }));
+  }
+  if(state.turns.length > n) state.turns.length = n;
+  state.turnCount = n;
+}
+/* 把传入的顺序规整为 cur 的一个排列：保证不会凭空丢人 / 造出重复角色 */
+function normalizeOrder(cur, order){
+  var pool = cur.slice(0,3);
+  var out  = [null,null,null];
+  var used = [false,false,false];
+  for(var i=0;i<3;i++){
+    var v = order ? order[i] : null;
+    if(!v) continue;
+    for(var j=0;j<3;j++){
+      if(!used[j] && pool[j] === v){ used[j] = true; out[i] = v; break; }
+    }
+  }
+  for(var p=0;p<3;p++){
+    if(out[p] === null){
+      for(var q=0;q<3;q++){ if(!used[q]){ used[q] = true; out[p] = pool[q]; break; } }
+    }
+  }
+  return out;
+}
+/* 重建「第 k 回合开始前」的牌序：从队伍初始顺序重放 0..k-1 的历史快照。
+   注意不能直接读 state.turns[k] 来对齐牌序 —— 回合之间会共用槽位，
+   更靠后的回合被改动过之后，前面回合的快照就已经过期（这是刻意保留的
+   「历史显示不被倒灌」），拿它回写牌序会把角色冲掉（丢人 / 造重复）。 */
+function deckAt(k){
+  var d = state.team.slice();
+  for(var t=0; t<k && t<state.turns.length; t++){
+    var sl = slotsOf(t), arr = state.turns[t];
+    for(var i=0;i<3;i++){ d[sl[i]] = (arr && arr[i]) || null; }
+  }
+  return d;
+}
+/* 交互式改序：k 为目标回合，order 为新的三人顺序（id 数组） */
+/* 内核：写入顺序并向下重算（不负责存档 / 渲染，供批量调用） */
+function applyTurnOrder(k, order){
+  if(!state.turns[k]) return false;
+  var sl = slotsOf(k);
+  var deck = deckAt(k);                               // 该回合的真实起始牌序
+  var shown = sl.map(function(s){ return deck[s] || null; });
+  var next  = normalizeOrder(shown, order);           // 规整为「当前三人的一个排列」
+  for(var j=0;j<3;j++){ deck[sl[j]] = next[j] || null; }
+  state.deck = deck;
+  state.turns[k] = sl.map(function(s){ return deck[s] || null; });
+  // 向下重算之后所有回合
+  for(var t=k+1; t<state.turns.length; t++){
+    (function(t){
+      var s2 = slotsOf(t);
+      state.turns[t] = s2.map(function(s){ return state.deck[s] || null; });
+    })(t);
+  }
+  return true;
+}
+function setTurnOrder(k, order){
+  if(!applyTurnOrder(k, order)) return;
+  clearAutoMarks();
+  save(); renderTurns(); renderSummary(); renderDeckStrip();
+}
+function swapInTurn(k, a, b){
+  var cur = (state.turns[k]||[]).slice(0,3);
+  if(a<0||b<0||a>2||b>2||a===b) return;
+  var tmp = cur[a]; cur[a] = cur[b]; cur[b] = tmp;
+  setTurnOrder(k, cur);
+}
+
+/* =======================================================
+   反推：把指定角色排进某一回合
+   -------------------------------------------------------
+   槽位轮转：第 t 回合（0-based）上场 3 个「连续槽位」
+     window(t) = [ 3t%7, (3t+1)%7, (3t+2)%7 ]
+   回合内三人可任意对调 ⇒ 等价规则：
+     若某角色「回合开始时」所在槽位 ∈ window(t)，
+     就能在本回合把它换到 window(t) 内的任意槽位；否则本回合动不了它。
+   所以要实现「第 T 回合第 P 位是 X」，必须先让 X 在第 T 回合开始前
+   进入 window(T)。为此需要调整前面某些回合——即「前置排序」。
+   ======================================================= */
+
+/* 无人工干预时，X 在第 T 回合开始时可能处于的槽位（不可行时用于提示） */
+function reachableSlots(p0, T){
+  var R = [p0];
+  for(var t=0;t<T;t++){
+    var W = slotsOf(t), hit = false;
+    for(var i=0;i<W.length;i++){ if(R.indexOf(W[i])>=0){ hit = true; break; } }
+    if(hit){
+      for(var j=0;j<W.length;j++){ if(R.indexOf(W[j])<0) R.push(W[j]); }
+    }
+  }
+  return R.sort(function(a,b){ return a-b; });
+}
+
+/* good[t] = 「第 t 回合开始时位于这些槽位，就还来得及在第 T 回合前进入 window(T)」 */
+function goodSets(T){
+  var g = [];
+  g[T] = slotsOf(T).slice();
+  for(var t=T-1;t>=0;t--){
+    var W = slotsOf(t), nxt = g[t+1], cur = [], hit = false;
+    for(var i=0;i<W.length;i++){ if(nxt.indexOf(W[i])>=0){ hit = true; break; } }
+    for(var j=0;j<nxt.length;j++){ if(W.indexOf(nxt[j])<0 && cur.indexOf(nxt[j])<0) cur.push(nxt[j]); }
+    if(hit){ for(var k=0;k<W.length;k++){ if(cur.indexOf(W[k])<0) cur.push(W[k]); } }
+    g[t] = cur;
+  }
+  return g;
+}
+
+/* 试算（不改动任何数据）：把 key 放到第 T 回合第 P 位，需要调整哪些前置回合
+   返回 { ok:true, steps:[{turn,from,to}], stepsTurns:Set } 或 { ok:false, reason, ... } */
+function planPlacement(key, T, P){
+  if(T < 0 || P < 0 || P > 2) return { ok:false, reason:'bad-target' };
+  var p0 = state.team.indexOf(key);
+  if(p0 < 0) return { ok:false, reason:'not-in-team' };
+  var Wt = slotsOf(T);
+  var targetSlot = Wt[P];
+  if(state.turns[T] && state.turns[T][P] === key) return { ok:true, already:true, steps:[], targetSlot:targetSlot };
+
+  var g = goodSets(T);
+  if(g[0].indexOf(p0) < 0){
+    return { ok:false, reason:'infeasible', reachable:reachableSlots(p0,T), need:Wt, key:key, turn:T };
+  }
+
+  // 正向贪心：能不干预就不干预（把改动尽量推迟到最靠后的回合，减少对已有排布的破坏）
+  var pos = p0, intervened = false, steps = [], used = {};
+  for(var t=0;t<T;t++){
+    var sl = slotsOf(t);
+    var inWin = sl.indexOf(pos) >= 0;
+    // 「不干预」时 X 的落点：干预之前沿用已有回合排布，之后一律原地不动
+    var snapPos = pos;
+    if(inWin && !intervened && state.turns[t]){
+      var idx = state.turns[t].indexOf(key);
+      if(idx >= 0) snapPos = sl[idx];
+    }
+    if(g[t+1].indexOf(snapPos) >= 0){ pos = snapPos; continue; }
+    // 本回合必须干预
+    if(!inWin) return { ok:false, reason:'infeasible', reachable:reachableSlots(p0,T), need:Wt, key:key, turn:T };
+    var q = -1;
+    for(var j=0;j<sl.length;j++){ if(g[t+1].indexOf(sl[j]) >= 0){ q = sl[j]; break; } }
+    if(q < 0) return { ok:false, reason:'infeasible', reachable:reachableSlots(p0,T), need:Wt, key:key, turn:T };
+    steps.push({ turn:t, from:pos, to:q });
+    used[t] = q;
+    pos = q;
+    intervened = true;
+  }
+  if(Wt.indexOf(pos) < 0){
+    return { ok:false, reason:'infeasible', reachable:reachableSlots(p0,T), need:Wt, key:key, turn:T };
+  }
+  return { ok:true, steps:steps, used:used, finalSlot:pos, targetSlot:targetSlot, turn:T, pos:P, key:key };
+}
+
+/* 清除反推高亮 */
+var autoMarkTimer = null;
+function clearAutoMarks(){
+  if(autoMarkTimer){ clearTimeout(autoMarkTimer); autoMarkTimer = null; }
+  if(!autoMarks) return false;
+  autoMarks = null;
+  return true;
+}
+function setAutoMarks(plan){
+  var used = {};
+  plan.steps.forEach(function(s){ used[s.turn] = s.to; });
+  clearAutoMarks();
+  autoMarks = { steps:used, target:{ turn:plan.turn, pos:plan.pos } };
+  autoMarkTimer = setTimeout(function(){
+    autoMarkTimer = null;
+    autoMarks = null;
+    renderTurns();
+  }, 9000);
+}
+
+/* 执行反推：真正写入前置排序，并把目标角色排到第 T 回合第 P 位
+   失败时回滚到调用前的状态，返回 { ok:false, ... } */
+function applyPlacement(key, T, P){
+  var plan = planPlacement(key, T, P);
+  if(!plan.ok) return plan;
+  if(plan.already){
+    save(); renderTurns(); renderSummary(); renderDeckStrip();
+    return plan;
+  }
+  var backup = JSON.stringify({ team:state.team, deck:state.deck, turns:state.turns, turnCount:state.turnCount });
+  try{
+    if(state.turnCount < T+1) ensureTurns(T+1);     // 目标回合若还没推演到，先补出来
+    // 1) 依次写入前置调整（由早到晚；每次都会向下重算，保证连锁一致）
+    for(var i=0;i<plan.steps.length;i++){
+      var st = plan.steps[i];
+      var sl = slotsOf(st.turn);
+      var base = deckAt(st.turn);
+      var arr = sl.map(function(s){ return base[s] || null; });
+      var a = arr.indexOf(key), b = sl.indexOf(st.to);
+      if(a < 0 || b < 0) throw new Error('step ' + (st.turn+1));
+      var tmp = arr[a]; arr[a] = arr[b]; arr[b] = tmp;
+      if(!applyTurnOrder(st.turn, arr)) throw new Error('apply ' + (st.turn+1));
+    }
+    // 2) 目标回合：把 key 换到第 P 位
+    var slT = slotsOf(T);
+    var baseT = deckAt(T);
+    var cur = slT.map(function(s){ return baseT[s] || null; });
+    var k = cur.indexOf(key);
+    if(k < 0) throw new Error('target ' + (T+1));
+    if(k !== P){ var tv = cur[k]; cur[k] = cur[P]; cur[P] = tv; }
+    if(!applyTurnOrder(T, cur)) throw new Error('applyT ' + (T+1));
+    // 3) 校验（保险丝：绝不让界面出现「以为成功了其实没成功」）
+    if(state.turns[T][P] !== key) throw new Error('verify');
+  }catch(err){
+    var bk = JSON.parse(backup);
+    state.team = bk.team; state.deck = bk.deck; state.turns = bk.turns; state.turnCount = bk.turnCount;
+    return { ok:false, reason:'internal', detail:String(err && err.message || err) };
+  }
+  setAutoMarks(plan);
+  save(); renderAll();
+  return plan;
+}
+
+/* =======================================================
+   渲染：预设库
+   ======================================================= */
+function libSource(){
+  if(libTab === 'roster') return rosterReady ? roster.map(rosterCard) : [];
+  return presets.map(presetCard);
+}
+function renderTypeFilter(){
+  var src = libSource();
+  var box = $('#typeFilter');
+  var html = '<button class="chip-filter' + (typeFilter==='all'?' on':'') + '" data-t="all">全部属性</button>';
+  TYPE_ORDER.forEach(function(k){
+    var n = src.filter(function(c){ return (c.type||'none')===k; }).length;
+    if(!n && typeFilter !== k) return;
+    html += '<button class="chip-filter' + (typeFilter===k?' on':'') + '" data-t="' + k + '">' +
+            typeOf(k).name + ' ' + n + '</button>';
+  });
+  box.innerHTML = html;
+}
+function renderRarityFilter(){
+  var src = libSource();
+  var box = $('#rarityFilter');
+  var html = '<button class="chip-filter' + (rarityFilter==='all'?' on':'') + '" data-r="all">全部稀有度</button>';
+  ['LR','UR','SSR','SR','R'].forEach(function(r){
+    var n = src.filter(function(c){ return c.rarity === r; }).length;
+    if(!n && rarityFilter !== r) return;
+    html += '<button class="chip-filter' + (rarityFilter===r?' on':'') + '" data-r="' + r + '">' + r + ' ' + n + '</button>';
+  });
+  box.innerHTML = html;
+}
+function renderLegend(){
+  $('#legend').innerHTML = TYPE_ORDER.map(function(k){
+    var t = typeOf(k);
+    return '<span><i style="background:' + t.color + '"></i>' + t.name + '</span>';
+  }).join('');
+}
+function filteredLib(){
+  var q = searchText.trim().toLowerCase();
+  var src = libSource();
+  var out = [];
+  for(var i=0;i<src.length;i++){
+    var c = src[i];
+    if(typeFilter !== 'all' && (c.type||'none') !== typeFilter) continue;
+    if(rarityFilter !== 'all' && c.rarity !== rarityFilter) continue;
+    if(q){
+      var hay = (c.name + ' ' + c.nameEn + ' ' + c.title + ' ' + c.rarity + ' ' + (c.cls||'') + ' ' +
+                 (c.links||[]).join(' ') + ' ' + (c.cats||[]).join(' ') + ' ' +
+                 (c.tags||[]).join(' ') + ' ' + (c.note||'')).toLowerCase();
+      if(hay.indexOf(q) < 0) continue;
+    }
+    out.push(c);
+  }
+  return out;
+}
+var LIB_LIMIT = 240;
+function renderLibrary(){
+  var src = libSource();
+  var list = filteredLib();
+  $$('.lib-tab').forEach(function(b){ b.classList.toggle('on', b.dataset.tab === libTab); });
+  $('#rosterCount').textContent = rosterReady ? roster.length : '未载入';
+  $('#mineCount').textContent = presets.length;
+  $('#presetCount').textContent = (libTab === 'roster')
+    ? (rosterReady ? src.length + ' 张' : '未载入')
+    : src.length + ' 个';
+  $('#rosterTip').style.display = (libTab === 'roster' && !rosterReady) ? 'block' : 'none';
+
+  var box = $('#presetList');
+  if(!list.length){
+    box.innerHTML = (libTab === 'roster' && !rosterReady)
+      ? ''
+      : '<div class="empty-tip">没有匹配的角色<br>换个关键词，或点上方「＋ 自建」手动录入</div>';
+    return;
+  }
+  var shown = list.slice(0, LIB_LIMIT);
+  var html = shown.map(function(c){
+    var t = typeOf(c.type);
+    var kept = !c.isMine && isKept(c);
+    return '<div class="preset-item' + (kept ? ' kept' : '') + '" data-key="' + esc(c.key) + '" ' +
+        'draggable="true" title="点击查看详情 · 可拖到右侧回合">' +
+      imgHTML(c) +
+      '<span class="names">' +
+        '<span class="nm">' + esc(dispName(c)) + '</span>' +
+        (function(s){ return s ? '<span class="en">' + esc(s) + '</span>' : ''; })(subLine(c)) +
+      '</span>' +
+      (c.rarity ? '<span class="meta" style="border-color:' + t.color + '66;color:' + t.color + '">' + esc(c.rarity) + '</span>' : '') +
+      '<span class="ops">' +
+        '<button class="icon-btn" data-act="add" data-key="' + esc(c.key) + '" title="加入队伍空位">＋</button>' +
+        (c.isMine
+          ? '<button class="icon-btn" data-act="edit" data-id="' + esc(c.id) + '" title="编辑">✎</button>' +
+            '<button class="icon-btn del" data-act="del" data-id="' + esc(c.id) + '" title="删除">✕</button>'
+          : (kept
+              ? '<button class="icon-btn kept" data-act="unkeep" data-key="' + esc(c.key) + '" title="已在「我的」中，点击移除">★</button>'
+              : '<button class="icon-btn" data-act="keep" data-key="' + esc(c.key) + '" title="收藏到「我的」">☆</button>')) +
+      '</span>' +
+    '</div>';
+  }).join('');
+  if(list.length > shown.length){
+    html += '<div class="empty-tip">已显示前 ' + shown.length + ' 个（共 ' + list.length + ' 个）<br>用搜索或筛选缩小范围</div>';
+  }
+  box.innerHTML = html;
+}
+
+/* =======================================================
+   渲染：队伍初始顺序
+   ======================================================= */
+function renderTeam(){
+  var box = $('#teamGrid');
+  box.innerHTML = state.team.map(function(key, i){
+    if(!key){
+      return '<div class="team-slot" data-pos="' + i + '" draggable="true">' +
+        '<span class="idx">' + (i+1) + '</span>' +
+        '<span class="slot-ph">＋ 空位</span>' +
+      '</div>';
+    }
+    var c = resolve(key);
+    var t = typeOf(c ? c.type : 'none');
+    return '<div class="team-slot filled" data-pos="' + i + '" draggable="true" ' +
+        'style="border-color:' + t.color + '55">' +
+      '<span class="idx">' + (i+1) + '</span>' +
+      '<button class="icon-btn del rm" data-act="rm" data-pos="' + i + '" title="移除">✕</button>' +
+      imgHTML(c) +
+      '<span class="nm">' + esc(c ? c.name : '（已移除）') + '</span>' +
+      '<span class="tp" style="background:' + t.color + '22;color:' + t.color + '">' + t.name +
+        (c && c.rarity ? ' · ' + esc(c.rarity) : '') + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+/* =======================================================
+   渲染：牌序条
+   ======================================================= */
+function renderDeckStrip(hiSlots){
+  var box = $('#deckStrip');
+  var html = '<span class="lab">当前牌序</span>';
+  for(var i=0;i<SLOTS;i++){
+    var c = resolve(state.deck[i]);
+    var t = typeOf(c ? c.type : 'none');
+    var on = hiSlots && hiSlots.indexOf(i) >= 0;
+    html += '<span class="chip' + (on?' hi':'') + '" draggable="true" data-slot="' + i + '" ' +
+      'title="可拖到右侧某一回合">' +
+      '<span class="n">' + (i+1) + '</span>' +
+      '<span style="color:' + t.color + '">●</span>' +
+      '<span>' + esc(c ? c.name : '空') + '</span>' +
+    '</span>';
+  }
+  box.innerHTML = html;
+}
+
+/* =======================================================
+   渲染：回合列表
+   ======================================================= */
+function cardHTML(t, pos, key){
+  var c = resolve(key);
+  var t2 = typeOf(c ? c.type : 'none');
+  var lab = slotLabels(t)[pos];
+  var sub = c ? [c.rarity, c.cls, c.typeEn].filter(Boolean).join(' · ') : '';
+  // 反推结果标记：目标位 / 被自动调整的槽位
+  var extra = '', tag = '';
+  if(autoMarks){
+    if(autoMarks.target && autoMarks.target.turn === t && autoMarks.target.pos === pos){
+      extra = ' target-hit';
+      tag = '<span class="auto-tag" style="background:var(--ok);color:#05130b">目标位</span>';
+    }else if(autoMarks.steps && autoMarks.steps[t] !== undefined && slotsOf(t)[pos] === autoMarks.steps[t]){
+      extra = ' auto-fix';
+      tag = '<span class="auto-tag">前置调整</span>';
+    }
+  }
+  return '<div class="card' + extra + '" draggable="true" data-turn="' + t + '" data-pos="' + pos + '" ' +
+      'style="--c:' + t2.color + '">' + tag +
+    '<div class="top">' +
+      '<span class="slot-lab">槽 ' + lab + '</span>' +
+      '<span class="ty" style="background:' + t2.color + '">' + t2.name + '</span>' +
+      '<span class="nudge">' +
+        '<button class="mini" data-act="left" data-turn="' + t + '" data-pos="' + pos + '"' + (pos===0?' disabled':'') + '>◀</button>' +
+        '<button class="mini" data-act="right" data-turn="' + t + '" data-pos="' + pos + '"' + (pos===2?' disabled':'') + '>▶</button>' +
+      '</span>' +
+    '</div>' +
+    '<div class="cbody">' + imgHTML(c) +
+      '<span class="info">' +
+        '<span class="nm" style="display:block">' + esc(c ? dispName(c) : '（空位）') + '</span>' +
+        '<span class="sub">' + esc(sub) + '</span>' +
+      '</span>' +
+    '</div>' +
+  '</div>';
+}
+function renderTurns(){
+  var box = $('#turns');
+  if(!state.turns.length){
+    box.innerHTML = '<div class="empty-tip">还没有生成回合，点上方「应用」或「＋ 回合」开始推演</div>';
+    return;
+  }
+  box.innerHTML = state.turns.map(function(row, t){
+    var sl = slotsOf(t);
+    return '<div class="turn" data-turn="' + t + '">' +
+      '<div class="turn-head">' +
+        '<span class="turn-no"><span class="bar"></span>第 ' + (t+1) + ' 回合</span>' +
+        '<span class="turn-slots">上场槽位 <b>' + slotLabels(t).join(' · ') + '</b></span>' +
+        '<span class="turn-tag">拖动卡片交换槽位，后续回合自动重算</span>' +
+      '</div>' +
+      '<div class="turn-cards">' +
+        /* 必须读回合快照而非当前牌序：两个回合可能共用同一个槽位，
+           若读牌序会把「更靠后的调整」倒灌进历史回合的显示 */
+        sl.map(function(s, pos){
+          return cardHTML(t, pos, (row && row[pos] !== undefined) ? row[pos] : null);
+        }).join('') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* =======================================================
+   渲染：汇总
+   ======================================================= */
+function renderSummary(){
+  var map = {};      // id -> [回合号]
+  var seen = [];
+  state.turns.forEach(function(row, t){
+    row.forEach(function(id){
+      if(!id) return;
+      if(!map[id]){ map[id] = []; seen.push(id); }
+      map[id].push(t+1);
+    });
+  });
+  var box = $('#summary');
+  if(!seen.length){
+    box.innerHTML = '<div class="empty-tip">选择角色后自动生成汇总</div>';
+  }else{
+    box.innerHTML = seen.map(function(id){
+      var c = resolve(id);                       // 统一 key：r:<图鉴id> / p:<自建id>
+      var t = typeOf(c ? c.type : 'none');
+      var arr = map[id];
+      var txt = arr.length > 24 ? arr.slice(0,24).join(', ') + ' …' : arr.join(', ');
+      return '<div class="sum-row">' +
+        '<span class="dot" style="background:' + t.color + ';color:' + t.color + '"></span>' +
+        '<span class="nm">' + esc(dispName(c) || '（已移除）') + '</span>' +
+        '<span class="tn">' + txt + '<br><span style="opacity:.6">共 ' + arr.length + ' 次</span></span>' +
+      '</div>';
+    }).join('');
+  }
+  var total = state.turns.length;
+  var full = state.turns.filter(function(r){ return r.every(function(x){ return !!x; }); }).length;
+  $('#roundInfo').textContent = '共 ' + total + ' 回合' + (full===total ? '' : '（' + (total-full) + ' 回合有空位）');
+}
+
+function renderAll(){
+  renderTypeFilter();
+  renderRarityFilter();
+  renderLegend();
+  renderLibrary();
+  renderTeam();
+  renderTurns();
+  renderSummary();
+  renderDeckStrip();
+  $('#turnCount').value = state.turnCount;
+  $('#btnLang').textContent = nameMode === 'zh' ? '中文' : (nameMode === 'en' ? 'English' : '中英');
+}
+
+/* =======================================================
+   事件：预设库
+   ======================================================= */
+$('#search').addEventListener('input', function(e){ searchText = e.target.value; renderLibrary(); });
+
+$('#typeFilter').addEventListener('click', function(e){
+  var b = e.target.closest('.chip-filter'); if(!b) return;
+  typeFilter = b.dataset.t;
+  renderTypeFilter(); renderLibrary();
+});
+
+$('#rarityFilter').addEventListener('click', function(e){
+  var b = e.target.closest('.chip-filter'); if(!b) return;
+  rarityFilter = b.dataset.r;
+  renderRarityFilter(); renderLibrary();
+});
+
+$('#libTabs').addEventListener('click', function(e){
+  var b = e.target.closest('.lib-tab'); if(!b) return;
+  libTab = b.dataset.tab;
+  typeFilter = 'all'; rarityFilter = 'all'; searchText = ''; $('#search').value = '';
+  if(libTab === 'roster' && !rosterReady) loadRoster();
+  renderAll();
+});
+
+$('#presetList').addEventListener('click', function(e){
+  var btn = e.target.closest('.icon-btn');
+  if(btn){
+    e.stopPropagation();
+    var act = btn.dataset.act;
+    if(act === 'add'){ addToTeam(btn.dataset.key); }
+    else if(act === 'keep'){ keepToMine(btn.dataset.key); }
+    else if(act === 'unkeep'){ unkeepFromMine(btn.dataset.key); }
+    else if(act === 'edit'){ openCharModal(btn.dataset.id); }
+    else if(act === 'del'){
+      var p = byId(btn.dataset.id);
+      if(confirm('确定删除角色「' + (p ? p.name : '') + '」？队伍中已选的位置也会一并清空。')){
+        var dead = 'p:' + btn.dataset.id;
+        presets = presets.filter(function(x){ return x.id !== btn.dataset.id; });
+        state.team = state.team.map(function(x){ return x === dead ? null : x; });
+        state.deck = state.deck.map(function(x){ return x === dead ? null : x; });
+        for(var i=0;i<state.turns.length;i++){
+          state.turns[i] = state.turns[i].map(function(x){ return x === dead ? null : x; });
+        }
+        save(); renderAll(); toast('已删除');
+      }
+    }
+    return;
+  }
+  var item = e.target.closest('.preset-item');
+  if(item){ openDetail(item.dataset.key); }
+});
+
+function addToTeam(key){
+  if(!key) return;
+  var idx = state.team.indexOf(null);
+  if(idx < 0){ toast('队伍已满 7 人，先移除一个吧'); return; }
+  state.team[idx] = key;
+  rebuild();
+  toast('已加入槽位 ' + (idx+1) + '：' + nameOf(key));
+}
+/* 把图鉴卡收藏进「我的」，便于二次编辑 / 离线留存 */
+/* 该图鉴卡是否已收藏进「我的」（按 中文名 + 英文名 判定，与 keepToMine 去重口径一致） */
+function isKept(c){
+  if(!c) return false;
+  return presets.some(function(p){ return p.name === c.name && (p.nameEn||'') === (c.nameEn||''); });
+}
+function keepToMine(key){
+  var c = resolve(key);
+  if(!c) return;
+  if(isKept(c)){
+    toast('「我的」里已有同名角色'); return;
+  }
+  presets.push({
+    id: uid(), name: c.name, nameEn: c.nameEn, title: c.title,
+    type: c.type, typeEn: c.typeEn, rarity: c.rarity, cls: c.cls,
+    tags: ['来自图鉴'], note: '', image: c.img,
+    links: c.links.slice(), cats: c.cats.slice(),
+    released: c.released, sourceUrl: c.sourceUrl, source: 'roster'
+  });
+  save(); renderAll();
+  toast('已收藏到「我的」：' + c.name);
+}
+/* 取消收藏（与 keepToMine 对称，供 ★ 按钮使用） */
+function unkeepFromMine(key){
+  var c = resolve(key);
+  if(!c) return;
+  var i = -1;
+  for(var k=0;k<presets.length;k++){
+    if(presets[k].name === c.name && (presets[k].nameEn||'') === (c.nameEn||'')){ i = k; break; }
+  }
+  if(i < 0) return;
+  var nm = presets[i].name;
+  presets.splice(i, 1);
+  save(); renderAll();
+  toast('已从「我的」移除：' + nm);
+}
+
+/* =======================================================
+   事件：把角色拖到指定回合（反推前置排序）
+   ======================================================= */
+/* 拖拽来源 → 角色 id */
+function dragSourceKey(){
+  if(!dragSrc) return null;
+  if(dragSrc.kind === 'lib')  return dragSrc.key || null;
+  if(dragSrc.kind === 'team') return state.team[dragSrc.pos] || null;
+  if(dragSrc.kind === 'deck') return state.deck[dragSrc.pos] || null;
+  if(dragSrc.kind === 'turn') return (state.turns[dragSrc.turn] || [])[dragSrc.pos] || null;
+  return null;
+}
+/* 实时提示条 */
+function showHint(html, ok){
+  var el = $('#dragHint');
+  el.innerHTML = html;
+  el.classList.toggle('bad', !ok);
+  el.classList.add('on');
+}
+function hideHint(){ $('#dragHint').classList.remove('on'); }
+function markHover(el, ok){
+  $$('.card.drop-ok, .card.drop-bad', turnsEl).forEach(function(x){
+    x.classList.remove('drop-ok'); x.classList.remove('drop-bad');
+  });
+  if(el) el.classList.add(ok ? 'drop-ok' : 'drop-bad');
+}
+
+/* 试算并把结果整理成提示文案
+   返回 { ok, html, text, cacheKey, autoAdd } */
+function placementHintHTML(key, T, P){
+  var Wt = slotLabels(T);
+  var c = resolve(key);
+  var nm = c ? dispName(c) : '该角色';
+  var posTxt = '第 <b>' + (T+1) + '</b> 回合第 <b>' + (P+1) + '</b> 位（槽 <span class="slots">' + Wt[P] + '</span>）';
+  var bad = function(html, text){
+    return { ok:false, html:'<span class="ttl">不可行</span>：' + html, text:text };
+  };
+  if(!key) return bad('这里没有角色，无法作为拖拽来源。', '不可放置：该位置没有角色。');
+
+  var inTeam = state.team.indexOf(key) >= 0, free = -1, restore = null;
+  if(!inTeam){
+    free = state.team.indexOf(null);
+    if(free < 0){
+      return bad('<b>' + esc(nm) + '</b> 不在当前队伍中，而队伍已满 7 人。' +
+        '<span class="sub">请先移除一个角色，或直接把它拖进「队伍初始顺序」。</span>',
+        '不可行：' + nm + ' 不在队伍中，且队伍已满 7 人。');
+    }
+    var t2 = state.team.slice(); t2[free] = key;
+    restore = state.team; state.team = t2;
+  }
+  var plan;
+  try{
+    plan = planPlacement(key, T, P);
+  }finally{
+    if(restore) state.team = restore;     // 异常安全：试算绝不改动真实数据
+  }
+  var addNote = inTeam ? '' : ' <span class="sub">（会先把 ' + esc(nm) + ' 放进队伍空位 ' + (free+1) + '）</span>';
+
+  if(plan.ok){
+    var how;
+    if(plan.already){
+      how = '<span class="sub">该位置已经是它，无需任何调整。</span>';
+    }else if(!plan.steps.length){
+      how = '<span class="sub">前置回合不用变，仅在本回合内对调。</span>';
+    }else{
+      how = '需先调整：' + plan.steps.map(function(s){
+        return '第 <b>' + (s.turn+1) + '</b> 回合（槽 <span class="slots">' + (s.from+1) + '</span> → <span class="slots">' + (s.to+1) + '</span>）';
+      }).join('、');
+    }
+    return {
+      ok:true, autoAdd:free, cacheKey:key+'|'+T+'|'+P,
+      html:'<span class="ttl">可以放置</span>：<b>' + esc(nm) + '</b> → ' + posTxt + '。' + how + addNote,
+      text:'已放置：' + nm + ' → 第 ' + (T+1) + ' 回合第 ' + (P+1) + ' 位' +
+        (plan.steps.length ? '（已调整 ' + plan.steps.map(function(s){ return '第'+(s.turn+1)+'回合'; }).join('、') + '）' : '')
+    };
+  }
+
+  if(plan.reason === 'infeasible'){
+    var reach = plan.reachable.map(function(s){ return s+1; }).join(' / ');
+    var need  = plan.need.map(function(s){ return s+1; }).join(' / ');
+    return bad(
+      '<b>' + esc(nm) + '</b> 赶不上第 ' + (T+1) + ' 回合。' +
+      '<span class="sub">它在第 ' + (T+1) + ' 回合开始前只可能出现在槽 <span class="slots">' + reach + '</span>，' +
+      '而该回合上场的是槽 <span class="slots">' + need + '</span>。' +
+      '可改放到更靠后的回合，或先调整队伍初始顺序。</span>' + addNote,
+      '不可行：' + nm + ' 在第 ' + (T+1) + ' 回合开始前只可能位于槽 ' + reach +
+      '，而该回合上场的是槽 ' + need + '。');
+  }
+  return bad('无法完成该放置。', '不可行：无法完成该放置。');
+}
+
+/* 真正落子：必要时先补进队伍，再执行反推 */
+function placeCharacter(key, T, P, autoAddSlot){
+  var hint = placementHintHTML(key, T, P);
+  if(!hint.ok){ toast(hint.text); return false; }
+  var c = resolve(key);
+  var nm = c ? c.name : key;
+
+  if(autoAddSlot >= 0 && state.team.indexOf(key) < 0){
+    // 补进队伍空位：沿用既有排布（该槽位此前为空，只需把 null 换成新角色）
+    state.team[autoAddSlot] = key;
+    if(state.deck[autoAddSlot] === null) state.deck[autoAddSlot] = key;
+    for(var t=0;t<state.turns.length;t++){
+      var sl = slotsOf(t), p = sl.indexOf(autoAddSlot);
+      if(p >= 0 && state.turns[t][p] === null) state.turns[t][p] = key;
+    }
+  }
+
+  var res = applyPlacement(key, T, P);
+  if(!res.ok){
+    save(); renderAll();
+    toast('放置失败：' + (res.detail || res.reason || '未知原因'));
+    return false;
+  }
+  var extra = res.steps.length
+    ? '（已自动调整 ' + res.steps.map(function(s){ return '第' + (s.turn+1) + '回合'; }).join('、') + '）'
+    : '';
+  toast((autoAddSlot >= 0 ? '已加入队伍槽位 ' + (autoAddSlot+1) + '；' : '') +
+        '第 ' + (T+1) + ' 回合第 ' + (P+1) + ' 位：' + nm + extra);
+  return true;
+}
+
+/* 拖拽结束（无论成功失败都会走到这里） */
+function endDrag(){
+  var bad = dragHintCache && !dragHintCache.ok ? dragHintCache.text : '';
+  dragHintCache = null;
+  hideHint();
+  clearDragUI();
+  if(bad) toast(bad);
+}
+document.addEventListener('dragend', endDrag);
+
+/* 来源 1：图鉴 / 我的 */
+$('#presetList').addEventListener('dragstart', function(e){
+  var it = e.target.closest('.preset-item'); if(!it || !it.dataset.key) return;
+  clearAutoMarks();
+  dragSrc = { kind:'lib', key: it.dataset.key };
+  it.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  try{ e.dataTransfer.setData('text/plain','lib'); }catch(err){}
+});
+/* 来源 2：当前牌序条 */
+$('#deckStrip').addEventListener('dragstart', function(e){
+  var ch = e.target.closest('.chip'); if(!ch) return;
+  var slot = parseInt(ch.dataset.slot, 10);
+  var key = state.deck[slot];
+  if(!key) return;
+  clearAutoMarks();
+  dragSrc = { kind:'deck', pos:slot, key:key };
+  ch.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  try{ e.dataTransfer.setData('text/plain','deck'); }catch(err){}
+});
+
+/* =======================================================
+   事件：队伍拖拽 / 移除
+   ======================================================= */
+$('#teamGrid').addEventListener('click', function(e){
+  var b = e.target.closest('[data-act="rm"]');
+  if(!b) return;
+  e.stopPropagation();
+  state.team[parseInt(b.dataset.pos,10)] = null;
+  rebuild();
+});
+$('#teamGrid').addEventListener('dragstart', function(e){
+  var el = e.target.closest('.team-slot'); if(!el) return;
+  clearAutoMarks();
+  dragSrc = { kind:'team', pos: parseInt(el.dataset.pos,10) };
+  el.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  try{ e.dataTransfer.setData('text/plain','slot'); }catch(err){}
+});
+$('#teamGrid').addEventListener('dragover', function(e){
+  if(!dragSrc) return;
+  var el = e.target.closest('.team-slot'); if(!el) return;
+  if(dragSrc.kind !== 'team' && dragSrc.kind !== 'lib') return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  el.classList.add('over');
+  if(dragSrc.kind === 'lib'){
+    var k = dragSrc.key, c = resolve(k);
+    showHint('<span class="ttl">可以放置</span>：把 <b>' + esc(c ? dispName(c) : k) + '</b> 放进队伍槽位 <b>' +
+      (parseInt(el.dataset.pos,10)+1) + '</b>（会按新的初始顺序重新推演）。', true);
+  }
+});
+$('#teamGrid').addEventListener('dragleave', function(e){
+  var el = e.target.closest('.team-slot'); if(el) el.classList.remove('over');
+});
+$('#teamGrid').addEventListener('drop', function(e){
+  var el = e.target.closest('.team-slot'); if(!el || !dragSrc) return;
+  var to = parseInt(el.dataset.pos,10);
+  if(dragSrc.kind === 'lib'){
+    e.preventDefault();
+    var key = dragSrc.key, from = state.team.indexOf(key);
+    if(from >= 0){
+      var t0 = state.team[from]; state.team[from] = state.team[to]; state.team[to] = t0;
+    }else{
+      state.team[to] = key;
+    }
+    clearDragUI();
+    rebuild();
+    toast('已放入队伍槽位 ' + (to+1) + '：' + nameOf(key));
+    return;
+  }
+  if(dragSrc.kind !== 'team') return;
+  e.preventDefault();
+  var from2 = dragSrc.pos;
+  if(to !== from2){
+    var tmp = state.team[from2]; state.team[from2] = state.team[to]; state.team[to] = tmp;
+    rebuild();
+    toast('已按新初始顺序重新推演');
+  }
+  clearDragUI();
+});
+$('#teamGrid').addEventListener('dragend', clearDragUI);
+
+/* =======================================================
+   事件：回合拖拽 / 微调
+   ======================================================= */
+var turnsEl = $('#turns');
+
+turnsEl.addEventListener('click', function(e){
+  var b = e.target.closest('.mini'); if(!b) return;
+  var t = parseInt(b.dataset.turn,10), pos = parseInt(b.dataset.pos,10);
+  if(b.dataset.act === 'left')  swapInTurn(t, pos, pos-1);
+  if(b.dataset.act === 'right') swapInTurn(t, pos, pos+1);
+});
+
+turnsEl.addEventListener('dragstart', function(e){
+  var c = e.target.closest('.card'); if(!c) return;
+  clearAutoMarks();
+  dragSrc = { kind:'turn', turn: parseInt(c.dataset.turn,10), pos: parseInt(c.dataset.pos,10) };
+  c.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  try{ e.dataTransfer.setData('text/plain','card'); }catch(err){}
+});
+turnsEl.addEventListener('dragover', function(e){
+  if(!dragSrc) return;
+  var c = e.target.closest('.card'); if(!c) return;
+  var t = parseInt(c.dataset.turn,10), pos = parseInt(c.dataset.pos,10);
+
+  // 同一回合内拖拽 → 纯交换，永远可行
+  if(dragSrc.kind === 'turn' && dragSrc.turn === t){
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    dragHintCache = { ok:true, text:'同一回合内交换位置。', cacheKey:'same' };
+    showHint('<span class="ttl">可以放置</span>：同一回合内交换位置。', true);
+    markHover(c, true);
+    return;
+  }
+  // 跨回合 / 来自图鉴、队伍、牌序条 → 试算前置排序
+  var key = dragSourceKey();
+  var ck = key + '|' + t + '|' + pos;
+  if(!dragHintCache || dragHintCache.cacheKey !== ck){
+    dragHintCache = placementHintHTML(key, t, pos);
+    dragHintCache.cacheKey = ck;
+  }
+  if(dragHintCache.ok){
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }else{
+    // 不 preventDefault → 浏览器显示「禁止放置」光标
+    e.dataTransfer.dropEffect = 'none';
+  }
+  showHint(dragHintCache.html, dragHintCache.ok);
+  markHover(c, dragHintCache.ok);
+});
+turnsEl.addEventListener('dragleave', function(e){
+  var c = e.target.closest('.card');
+  if(c){ c.classList.remove('over'); c.classList.remove('drop-ok'); c.classList.remove('drop-bad'); }
+});
+turnsEl.addEventListener('drop', function(e){
+  var c = e.target.closest('.card'); if(!c || !dragSrc) return;
+  var t = parseInt(c.dataset.turn,10), pos = parseInt(c.dataset.pos,10);
+
+  // 同一回合内 → 交换
+  if(dragSrc.kind === 'turn' && dragSrc.turn === t){
+    e.preventDefault();
+    var a = dragSrc.pos;
+    clearDragUI();
+    if(a !== pos) swapInTurn(t, a, pos);
+    return;
+  }
+  var key = dragSourceKey();
+  var hint = placementHintHTML(key, t, pos);
+  if(!hint.ok){ clearDragUI(); return; }   // 表现为拖拽失败，dragend 时给出提示
+  e.preventDefault();
+  clearDragUI();
+  placeCharacter(key, t, pos, hint.autoAdd);
+});
+turnsEl.addEventListener('dragend', clearDragUI);
+
+/* 悬停高亮当前回合的三个槽位 */
+turnsEl.addEventListener('mouseover', function(e){
+  var el = e.target.closest('.turn'); if(!el) return;
+  $$('.turn', turnsEl).forEach(function(x){ x.classList.remove('focus'); });
+  el.classList.add('focus');
+  renderDeckStrip(slotsOf(parseInt(el.dataset.turn,10)));
+});
+turnsEl.addEventListener('mouseleave', function(){ renderDeckStrip(); });
+
+function clearDragUI(){
+  dragSrc = null;
+  $$('.card.dragging, .card.over, .card.drop-ok, .card.drop-bad, ' +
+     '.team-slot.dragging, .team-slot.over, .preset-item.dragging, .chip.dragging').forEach(function(x){
+    x.classList.remove('dragging'); x.classList.remove('over');
+    x.classList.remove('drop-ok'); x.classList.remove('drop-bad');
+  });
+}
+
+/* =======================================================
+   事件：回合数控制
+   ======================================================= */
+$('#btnApplyCount').addEventListener('click', function(){
+  var n = parseInt($('#turnCount').value,10);
+  if(!n || n < 1) { toast('请输入 ≥1 的回合数'); return; }
+  n = Math.min(999, n);
+  ensureTurns(n);
+  save(); renderTurns(); renderSummary();
+  toast('已推演至第 ' + n + ' 回合');
+});
+$('#turnCount').addEventListener('keydown', function(e){
+  if(e.key === 'Enter') $('#btnApplyCount').click();
+});
+[['#btnPlus1',1],['#btnPlus5',5],['#btnPlus10',10]].forEach(function(pair){
+  $(pair[0]).addEventListener('click', function(){
+    ensureTurns(state.turns.length + pair[1]);
+    save(); renderTurns(); renderSummary();
+    $('#turnCount').value = state.turnCount;
+    toast('已延伸至第 ' + state.turnCount + ' 回合');
+  });
+});
+$('#btnReset').addEventListener('click', function(){
+  if(!state.turns.length) return;
+  if(!confirm('将清除所有手动调整，按队伍初始顺序重新推演 ' + state.turnCount + ' 个回合。继续？')) return;
+  rebuild(); toast('已还原');
+});
+
+/* =======================================================
+   事件：队伍工具
+   ======================================================= */
+$('#btnShuffle').addEventListener('click', function(){
+  for(var i = state.team.length - 1; i > 0; i--){
+    var j = Math.floor(Math.random() * (i+1));
+    var tmp = state.team[i]; state.team[i] = state.team[j]; state.team[j] = tmp;
+  }
+  rebuild(); toast('已随机打乱初始顺序');
+});
+$('#btnAutoFill').addEventListener('click', function(){
+  var pool = presets.slice();
+  for(var i = state.team.length - 1; i > 0; i--){
+    var j = Math.floor(Math.random() * (i+1));
+    var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+  }
+  var k = 0;
+  for(var s=0; s<SLOTS; s++){
+    if(!state.team[s] && k < pool.length) state.team[s] = pool[k++].id;
+  }
+  rebuild(); toast('已用预设角色填补空位');
+});
+$('#btnClearTeam').addEventListener('click', function(){
+  if(!confirm('清空当前队伍？')) return;
+  state.team = new Array(SLOTS).fill(null);
+  rebuild(); toast('队伍已清空');
+});
+
+/* =======================================================
+   事件：复制排程
+   ======================================================= */
+$('#btnCopyPlan').addEventListener('click', function(){
+  if(!state.turns.length){ toast('还没有排程'); return; }
+  var lines = ['【龙珠爆裂大战 · 战斗排序】共 ' + state.turns.length + ' 回合'];
+  lines.push('初始顺序：' + state.team.map(function(id,i){ return (i+1) + '.' + nameOf(id); }).join('  '));
+  lines.push('');
+  state.turns.forEach(function(row, t){
+    lines.push('第' + (t+1) + '回合 [槽位 ' + slotLabels(t).join('-') + ']  ' +
+      row.map(function(id, i){ return (i+1) + '.' + nameOf(id); }).join('  |  '));
+  });
+  var txt = lines.join('\n');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){ toast('排程已复制到剪贴板'); },
+      function(){ fallbackCopy(txt); });
+  }else{ fallbackCopy(txt); }
+});
+function fallbackCopy(txt){
+  var ta = document.createElement('textarea');
+  ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); toast('排程已复制'); }catch(e){ toast('复制失败，请手动选择'); }
+  document.body.removeChild(ta);
+}
+
+/* =======================================================
+   角色新增 / 编辑弹窗
+   ======================================================= */
+function fillTypeSelect(){
+  $('#fType').innerHTML = TYPE_ORDER.map(function(k){
+    return '<option value="' + k + '">' + typeOf(k).name + '（' + k + '）</option>';
+  }).join('');
+}
+function openCharModal(id){
+  editingId = id || null;
+  var p = id ? byId(id) : null;
+  $('#charModalTitle').textContent = p ? '编辑角色' : '新增角色';
+  $('#fName').value = p ? p.name : '';
+  $('#fType').value = p ? (p.type||'none') : 'str';
+  $('#fRarity').value = p ? (p.rarity||'') : '';
+  $('#fTags').value = p ? ((p.tags||[]).join(', ')) : '';
+  $('#fNote').value = p ? (p.note||'') : '';
+  $('#maskChar').classList.add('on');
+  setTimeout(function(){ $('#fName').focus(); }, 40);
+}
+$('#charCancel').addEventListener('click', function(){ $('#maskChar').classList.remove('on'); });
+$('#maskChar').addEventListener('click', function(e){ if(e.target === this) this.classList.remove('on'); });
+$('#charSave').addEventListener('click', function(){
+  var name = $('#fName').value.trim();
+  if(!name){ toast('请填写角色名称'); return; }
+  var data = {
+    name: name,
+    type: $('#fType').value,
+    rarity: $('#fRarity').value.trim(),
+    tags: $('#fTags').value.split(',').map(function(s){ return s.trim(); }).filter(Boolean),
+    note: $('#fNote').value.trim()
+  };
+  if(editingId){
+    var p = byId(editingId);
+    if(p){ for(var k in data){ if(data.hasOwnProperty(k)) p[k] = data[k]; } }
+    toast('已更新角色');
+  }else{
+    var np = { id: uid(), name:data.name, type:data.type, rarity:data.rarity,
+               tags:data.tags, note:data.note, image:'', source:'manual' };
+    presets.push(np);
+    toast('已保存到预设库');
+  }
+  save(); renderAll();
+  $('#maskChar').classList.remove('on');
+});
+$('#btnAddChar').addEventListener('click', function(){ openCharModal(null); });
+$('#fName').addEventListener('keydown', function(e){ if(e.key === 'Enter') $('#charSave').click(); });
+
+/* =======================================================
+   预设库导入 / 导出
+   ======================================================= */
+function download(filename, text){
+  var blob = new Blob([text], {type:'application/json;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+$('#btnExportPresets').addEventListener('click', function(){
+  download('dokkan-presets-' + new Date().toISOString().slice(0,10) + '.json',
+    JSON.stringify({ type:'dbs-sorter-presets', version:1, exportedAt:new Date().toISOString(), presets:presets }, null, 2));
+  toast('预设库已导出');
+});
+$('#btnImportPresets').addEventListener('click', function(){ $('#maskWiki').classList.add('on'); });
+$('#wikiCancel').addEventListener('click', function(){ $('#maskWiki').classList.remove('on'); });
+$('#maskWiki').addEventListener('click', function(e){ if(e.target === this) this.classList.remove('on'); });
+$('#btnHelp').addEventListener('click', function(){ $('#maskHelp').classList.add('on'); });
+$('#helpClose').addEventListener('click', function(){ $('#maskHelp').classList.remove('on'); });
+$('#maskHelp').addEventListener('click', function(e){ if(e.target === this) this.classList.remove('on'); });
+
+function importPresetArray(arr, opts){
+  opts = opts || {};
+  if(!Array.isArray(arr)) return 0;
+  var exist = {};
+  presets.forEach(function(p){ exist[p.name] = true; });
+  var added = 0;
+  arr.forEach(function(o){
+    if(!o) return;
+    var name = String(o.name || o.title || '').trim();
+    if(!name || exist[name]) return;
+    var type = String(o.type || 'none').toLowerCase();
+    if(TYPE_ORDER.indexOf(type) < 0){
+      // 兼容中文/英文属性写法
+      var alias = { '力':'str','速':'agl','技':'teq','知':'int','体':'phy','无':'none',
+                    'STR':'str','AGL':'agl','TEQ':'teq','INT':'int','PHY':'phy' };
+      type = alias[o.type] || alias[String(o.type||'').toUpperCase()] || 'none';
+    }
+    presets.push({
+      id: uid(),
+      name: name,
+      nameEn: String(o.nameEn || o.name_en || '').trim(),
+      title: String(o.title || '').trim(),
+      type: type,
+      typeEn: String(o.typeEn || o.type_en || '').toUpperCase(),
+      rarity: String(o.rarity || o.rank || '').trim(),
+      cls: String(o.cls || o.class || '').trim(),
+      tags: Array.isArray(o.tags) ? o.tags.map(String) : (o.tags ? String(o.tags).split(',').map(function(s){return s.trim();}).filter(Boolean) : []),
+      note: String(o.note || o.desc || '').trim(),
+      image: String(o.image || o.imageUrl || ''),
+      links: Array.isArray(o.links) ? o.links.map(String) : [],
+      cats: Array.isArray(o.cats || o.categories) ? (o.cats || o.categories).map(String) : [],
+      released: String(o.released || '').trim(),
+      sourceUrl: String(o.sourceUrl || ''),
+      source: opts.source || 'import'
+    });
+    exist[name] = true;
+    added++;
+  });
+  if(added){ save(); renderAll(); }
+  return added;
+}
+$('#wikiImport').addEventListener('click', function(){
+  var raw = $('#wikiJson').value.trim();
+  if(!raw){ toast('请先粘贴 JSON 数据'); return; }
+  var data;
+  try{ data = JSON.parse(raw); }catch(e){ toast('JSON 解析失败：' + e.message); return; }
+  var arr = Array.isArray(data) ? data : (Array.isArray(data.presets) ? data.presets : null);
+  if(!arr){ toast('需要是数组，或含 presets 字段的对象'); return; }
+  var n = importPresetArray(arr, { source:'import' });
+  toast(n ? ('成功导入 ' + n + ' 个角色' + (n < arr.length ? '（' + (arr.length-n) + ' 个重名已跳过）' : '')) : '没有新增角色（可能全部重名）');
+  $('#wikiJson').value = '';
+  $('#maskWiki').classList.remove('on');
+});
+$('#wikiFile').addEventListener('change', function(e){
+  var f = e.target.files && e.target.files[0];
+  if(!f) return;
+  var reader = new FileReader();
+  reader.onload = function(){
+    $('#wikiJson').value = String(reader.result || '');
+    toast('文件已读取，点「导入」确认');
+  };
+  reader.readAsText(f, 'utf-8');
+  e.target.value = '';
+});
+$('#filePresets').addEventListener('change', function(e){
+  var f = e.target.files && e.target.files[0];
+  if(!f) return;
+  var reader = new FileReader();
+  reader.onload = function(){
+    var data;
+    try{ data = JSON.parse(String(reader.result || '')); }catch(err){ toast('文件不是有效 JSON'); return; }
+    var arr = Array.isArray(data) ? data : (Array.isArray(data.presets) ? data.presets : null);
+    if(!arr){ toast('文件结构不正确'); return; }
+    var n = importPresetArray(arr, { source:'import' });
+    toast(n ? ('成功导入 ' + n + ' 个角色') : '没有新增角色（可能全部重名）');
+  };
+  reader.readAsText(f, 'utf-8');
+  e.target.value = '';
+});
+
+/* =======================================================
+   全角色图鉴（roster.js）
+   ======================================================= */
+function loadRoster(){
+  if(rosterReady) return;
+  rosterLoadTried = true;
+  var s = document.createElement('script');
+  s.src = 'roster.js';
+  s.onload = function(){
+    var data = window.DOKKAN_ROSTER;
+    var arr = (data && data.cards) || (Array.isArray(data) ? data : null);
+    if(Array.isArray(arr) && arr.length){
+      roster = arr;
+      rosterMeta.links = data.links || [];
+      rosterMeta.cats = data.cats || [];
+      rosterReady = true;
+      renderAll();
+      toast('已载入图鉴 ' + arr.length + ' 张卡（数据来源 DOKKAN.FYI）');
+    }else{
+      renderAll();
+    }
+  };
+  s.onerror = function(){
+    rosterReady = false;
+    renderAll();
+    toast('未找到 roster.js，请与 index.html 放在同一目录');
+  };
+  document.head.appendChild(s);
+}
+$('#rosterTip').addEventListener('click', function(e){
+  if(e.target.closest('#btnRetryRoster')) loadRoster();
+});
+
+/* =======================================================
+   角色详情
+   ======================================================= */
+var detailKey = null;
+function openDetail(key){
+  var c = resolve(key);
+  if(!c){ toast('角色数据缺失'); return; }
+  detailKey = key;
+  var av = $('#dAvatar');
+  if(c.img){ av.src = c.img; av.style.visibility = 'visible'; }
+  else { av.style.visibility = 'hidden'; }
+  $('#dName').textContent = c.name || c.nameEn || '—';
+  $('#dEn').textContent = c.nameEn || '';
+  var tb = typeOf(c.type);
+  $('#dBadges').innerHTML =
+    '<span class="badge ty" style="background:' + tb.color + '">' + tb.name +
+      (c.typeEn ? ' / ' + esc(c.typeEn) : '') + '</span>' +
+    (c.rarity ? '<span class="badge">' + esc(c.rarity) + '</span>' : '') +
+    (c.cls ? '<span class="badge">' + esc(c.cls) + '</span>' : '') +
+    (c.released ? '<span class="badge">首发 ' + esc(c.released) + '</span>' : '') +
+    '<span class="badge">' + (c.isMine ? '我的 / 自建' : '图鉴') + '</span>';
+  $('#dLinks').innerHTML = (c.links && c.links.length)
+    ? c.links.map(function(x){ return '<span class="tag link">' + esc(x) + '</span>'; }).join('')
+    : '<span class="tag">暂无数据</span>';
+  $('#dCats').innerHTML = (c.cats && c.cats.length)
+    ? c.cats.map(function(x){ return '<span class="tag cat">' + esc(x) + '</span>'; }).join('')
+    : '<span class="tag">暂无数据</span>';
+  $('#dTitleWrap').style.display = c.title ? '' : 'none';
+  $('#dTitle').textContent = c.title || '';
+  $('#dSource').innerHTML = c.sourceUrl
+    ? '数据来源：<a href="' + esc(c.sourceUrl) + '" target="_blank" rel="noopener" ' +
+      'style="color:var(--accent2)">DOKKAN.FYI</a> ｜ 链接技能与分类为官方繁中译名转简体，' +
+      '角色名由术语表逐词对照生成，可能与游戏内文本有出入。'
+    : '自建角色（未关联数据源）';
+  $('#detailSaveMine').style.display = c.isMine ? 'none' : '';
+  $('#maskDetail').classList.add('on');
+}
+$('#detailClose').addEventListener('click', function(){ $('#maskDetail').classList.remove('on'); });
+$('#maskDetail').addEventListener('click', function(e){ if(e.target === this) this.classList.remove('on'); });
+$('#detailAddTeam').addEventListener('click', function(){
+  if(detailKey) addToTeam(detailKey);
+  $('#maskDetail').classList.remove('on');
+});
+$('#detailSaveMine').addEventListener('click', function(){
+  if(detailKey) keepToMine(detailKey);
+  $('#maskDetail').classList.remove('on');
+});
+
+/* 名字语言模式 */
+$('#btnLang').addEventListener('click', function(){
+  nameMode = nameMode === 'zh' ? 'en' : (nameMode === 'en' ? 'both' : 'zh');
+  try{ localStorage.setItem('dbs_sorter_namemode', nameMode); }catch(e){}
+  renderAll();
+  toast('角色名显示：' + (nameMode === 'zh' ? '中文' : nameMode === 'en' ? 'English' : '中文 + 英文'));
+});
+
+/* =======================================================
+   对外接口（为后续 Wiki 抓取预留）
+   ======================================================= */
+window.DokkanSorter = {
+  version: '2.1.0',
+  typeMap: TYPES,
+  /* --- 图鉴 --- */
+  getRoster: function(){ return roster.slice(); },
+  rosterSize: function(){ return roster.length; },
+  isRosterReady: function(){ return rosterReady; },
+  loadRoster: loadRoster,
+  searchRoster: function(q){
+    var s = String(q||'').toLowerCase();
+    return roster.map(rosterCard).filter(function(c){
+      return (c.name + ' ' + c.nameEn + ' ' + c.links.join(' ') + ' ' + c.cats.join(' ')).toLowerCase().indexOf(s) >= 0;
+    });
+  },
+  card: function(key){ return resolve(key); },
+  setTeamByRosterIds: function(ids){
+    state.team = fixArr((ids||[]).slice(0,SLOTS).map(function(id){
+      return (id === null || id === undefined || id === '') ? null : ('r:' + id);
+    }));
+    rebuild(); return state.team;
+  },
+  getNameMode: function(){ return nameMode; },
+  setNameMode: function(m){ if(m==='zh'||m==='en'||m==='both'){ nameMode = m; renderAll(); } },
+  getPresets: function(){ return presets.slice(); },
+  addPresets: function(arr, opts){ return importPresetArray(arr, opts); },
+  removePreset: function(name){ presets = presets.filter(function(p){ return p.name !== name; }); save(); renderAll(); },
+  setTeamByIds: function(ids){
+    state.team = fixArr(ids); rebuild(); return state.team;
+  },
+  setTeamByNames: function(names){
+    var keys = (names||[]).slice(0,SLOTS).map(function(n){
+      var p = presets.filter(function(x){ return x.name === n || x.nameEn === n; })[0];
+      if(p) return 'p:' + p.id;
+      for(var i=0;i<roster.length;i++){
+        if(roster[i][1] === n || roster[i][2] === n) return 'r:' + roster[i][0];
+      }
+      return null;
+    });
+    while(keys.length < SLOTS) keys.push(null);
+    state.team = fixArr(keys); rebuild(); return state.team;
+  },
+  getState: function(){ return JSON.parse(JSON.stringify(state)); },
+  getPlan: function(){
+    return state.turns.map(function(row, t){
+      return { turn: t+1, slots: slotLabels(t), names: row.map(function(id){ return nameOf(id); }) };
+    });
+  },
+  setTurnCount: function(n){ ensureTurns(n); save(); renderTurns(); renderSummary(); },
+  rebuild: rebuild,
+  render: renderAll
+};
+
+/* =======================================================
+   启动
+   ======================================================= */
+fillTypeSelect();
+try{
+  var savedMode = localStorage.getItem('dbs_sorter_namemode');
+  if(savedMode === 'en' || savedMode === 'both' || savedMode === 'zh') nameMode = savedMode;
+}catch(e){}
+load();
+renderAll();
+loadRoster();   // 有 roster.js 就自动挂载全角色图鉴，没有则静默降级
+if(state.turns.length && state.turns.every(function(r){ return r.every(function(x){ return !x; }); })){
+  toast('欢迎使用：先从左侧角色库选满 7 人吧');
+}
+})();
+</script>
+</body>
+</html>

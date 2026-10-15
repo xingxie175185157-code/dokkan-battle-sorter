@@ -1,0 +1,43 @@
+{
+  "name": "dokkan-battle-sorter",
+  "version": "2.1.0",
+  "private": true,
+  "description": "《龙珠爆裂大战》战斗排序器 —— 7 人队伍、每回合上场 3 人的循环槽位推演、拖拽改序连锁重算、目标回放反推，附 1458 张全角色中文图鉴。零依赖单文件 Web 应用。",
+  "keywords": [
+    "dokkan",
+    "dokkan-battle",
+    "龙珠爆裂大战",
+    "七龍珠爆裂激戰",
+    "龙珠",
+    "排序器",
+    "工具",
+    "vanilla-js",
+    "single-file",
+    "no-dependencies"
+  ],
+  "license": "MIT",
+  "homepage": "https://OWNER.github.io/dokkan-battle-sorter/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OWNER/dokkan-battle-sorter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OWNER/dokkan-battle-sorter/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node tests/check.js && node tests/verify.mjs && node tests/dom.mjs",
+    "test:engine": "node tests/check.js",
+    "test:static": "node tests/verify.mjs",
+    "test:dom": "node tests/dom.mjs",
+    "crawl": "node tools/crawl.mjs",
+    "build": "node tools/build-zh.mjs",
+    "rebuild": "node tools/crawl.mjs && node tools/build-zh.mjs",
+    "serve": "node tools/serve.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
+  }
+}

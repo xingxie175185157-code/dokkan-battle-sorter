@@ -1,0 +1,57 @@
+name: 💡 功能建议
+description: 提出新功能或改进想法
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: 你想解决什么问题
+      description: 先说场景和痛点，再说方案 —— 有时候有更简单的做法
+      placeholder: |
+        例如：每次换队伍都要重新点 7 次很麻烦，希望能把常用队伍整套存下来。
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: 你设想的做法
+      placeholder: 在「我的」里加一个「队伍方案」页签，能保存当前 7 人与初始顺序。
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 涉及部分
+      multiple: true
+      options:
+        - 回合推演 / 排序引擎
+        - 拖拽交互
+        - 反推（拖到指定回合）
+        - 图鉴数据 / 译名
+        - 收藏与预设库
+        - 导入 / 导出 / 备份
+        - 界面与视觉
+        - 移动端体验
+        - 性能（回合数很多时）
+        - 其它
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternative
+    attributes:
+      label: 你目前是怎么绕过的
+      description: 有替代方案的话写一下，能帮助判断优先级
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 自查
+      options:
+        - label: 我搜索过是否已有相同建议
+          required: true

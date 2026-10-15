@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 先看使用说明
+    url: https://github.com/OWNER/dokkan-battle-sorter#-使用说明
+    about: 槽位轮转规则、改序与连锁、拖到指定回合、收藏与语言切换的完整说明
+  - name: 🗃️ 数据来源与权利声明
+    url: https://github.com/OWNER/dokkan-battle-sorter/blob/main/NOTICE.md
+    about: 角色数据来自 DOKKAN.FYI；译名由术语表生成，可能与游戏内文本有出入
+  - name: 🌐 在线体验
+    url: https://OWNER.github.io/dokkan-battle-sorter/
+    about: 不想下载？直接在线打开
