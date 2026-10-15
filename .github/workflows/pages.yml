@@ -1,7 +1,11 @@
 name: Deploy to GitHub Pages
 
 # 把 index.html + roster.js 发布为在线可用的网页版。
-# 首次使用：仓库 Settings → Pages → Build and deployment → Source 选 “GitHub Actions”。
+#
+# 首次运行会自动尝试开启 Pages（见下方 enablement: true）。
+# 若自动开启失败（例如组织策略限制），手动一次性设置即可：
+#   仓库 Settings → Pages → Build and deployment → Source 选 “GitHub Actions”，
+#   然后到 Actions 里 Re-run 本工作流。
 
 on:
   push:
@@ -27,6 +31,10 @@ jobs:
 
       - name: 配置 Pages
         uses: actions/configure-pages@v5
+        with:
+          # 若仓库尚未开启 Pages（初次运行的常见情况），尝试自动开启，
+          # 免去手动去 Settings → Pages 点一次。需要上面的 pages: write 权限。
+          enablement: true
 
       - name: 组装静态站点
         run: |
