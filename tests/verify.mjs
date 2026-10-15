@@ -148,6 +148,27 @@ ok(/var c = resolve\(id\)/.test(sumBody), '汇总表用 resolve() 解析统一 k
 ok(/dispName\(c\)/.test(sumBody), '汇总表用 dispName() 显示名字');
 ok(!/byId\(/.test(sumBody), '汇总表不再直接调用 byId()（图鉴 key 会解析失败）');
 
+// 12. 编队（队伍预设）
+for (const id of ['teamPresets', 'maskTeam', 'teamName', 'teamPreview', 'teamCancel', 'teamConfirm']) {
+  ok(new RegExp(`id="${id}"`).test(html), `编队相关 DOM 节点存在：#${id}`);
+}
+const teamFns = ['teamFromMembers', 'teamSignature', 'normalizeTeams', 'remapTeamMembers',
+                 'renderTeamPresets', 'applyTeamPreset', 'removeTeamPreset', 'openTeamModal',
+                 'confirmTeamModal', 'importTeamArray', 'importBundle', 'importResultText'];
+const missTeam = teamFns.filter(f => !new RegExp('function\\s+' + f + '\\s*\\(').test(inlineSrc));
+ok(missTeam.length === 0, `编队相关函数已定义 (${teamFns.length} 个${missTeam.length ? '，缺失: ' + missTeam.join(',') : ''})`);
+ok(/renderTeam\(\);\s*\n\s*renderTeamPresets\(\);/.test(inlineSrc), 'renderAll 会重绘编队快捷位');
+ok(/LS_TEAMS\s*=\s*'dbs_sorter_teams_v1'/.test(inlineSrc), '编队有独立的 localStorage 键');
+ok(/localStorage\.setItem\(LS_TEAMS/.test(inlineSrc), 'save() 会持久化编队');
+ok(/normalizeTeams\(tp\)/.test(inlineSrc), 'load() 会读回并清洗编队');
+// 导出必须同时含 presets 与 teams，且导入兼容两者
+ok(/presets:presets,\s*teams:teams/.test(inlineSrc), '导出 JSON 同时包含 presets 与 teams');
+ok(/version:\s*2/.test(inlineSrc) && /Array\.isArray\(data\.teams\)/.test(inlineSrc), '导入支持 teams 段（收藏库备份 v2）');
+// 「只存人」的约定：编队里不得出现回合排程相关字段
+const tpPush = (inlineSrc.match(/teams\.push\(\{[^}]*\}\)/) || [''])[0];
+ok(tpPush.length > 0 && !/turns|deck|turnCount/.test(tpPush), '编队只保存成员与初始顺序，不含回合排程');
+ok(/version:\s*'2\.2\.0'/.test(inlineSrc), '应用版本号已升到 2.2.0');
+
 const s = R.cards[0];
 console.log(`\n样卡: ${s[4]} ${s[1]} | ${s[2]} | ${s[5]} ${s[6]} | 链接 ${s[9].map(i => R.links[i]).join('、')}`);
 console.log(`      分类 ${s[10].map(i => R.cats[i]).join('、')}`);

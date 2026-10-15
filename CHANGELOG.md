@@ -5,6 +5,47 @@
 
 ## [未发布]
 
+## [2.2.0] - 2026-10-15
+
+### 新增
+
+- **编队（队伍预设）**：队伍区顶部新增一排编队快捷位，把当前队伍存成一套编队后，
+  点一下即可整套换人。
+  - 编队只保存 **「队伍里有哪 7 个人」+ 初始槽位顺序**，不保存回合数与手动拖出来的排程；
+    载入后按初始顺序重新推演
+  - 每套编队带 **7 格属性指纹**（按槽位顺序的色条），鼠标悬停可看到完整名单
+  - 支持重命名、删除；当前队伍对应的那套编队会高亮为「当前」
+  - 空队伍不允许保存；同一套编队不会重复入库（按队伍指纹去重）
+  - 命名弹窗内实时预览这套队伍的 7 个槽位
+- **与原有预设功能打通**：
+  - 导出 JSON 升级为 v2，同时包含 `presets` 与 `teams`，导入兼容旧版（只有 `presets` 的文件照常可读）
+  - 导入时自动把编队里指向**自建卡**的引用重写为新的 id
+    （导出再导入到另一台设备后，编队不会退化成「（已移除）」）
+  - 编队与角色共用一套 localStorage 持久化与导入导出入口
+- 对外接口新增 `getTeams` / `saveTeam` / `applyTeam` / `removeTeam` / `addTeams` /
+  `getTeamSignature` / `importBundle`
+
+### 修复
+
+- **「从预设自动填满」写入的是裸 id 而非统一 key**：同一个角色经「＋ 加入」进入队伍是 `p:xxx`，
+  经「自动填满」进入则是 `xxx`。两者虽然都能渲染，但会让「同一套队伍」算出两种不同的指纹，
+  导致编队去重与「当前」高亮失效。现在统一写入 `p:` 前缀。
+- **旧数据迁移**：读取存档时把队伍 / 牌序 / 回合快照里的裸 id 一律补成 `p:` 前缀，
+  使同一角色只有一种写法；队伍指纹在比较前也会先做这层归一化。
+
+### 变更
+
+- 应用版本号升至 `2.2.0`
+
+### 测试
+
+- 引擎回归：73 → **94 项**（新增编队成员规整、队伍指纹、外部数据清洗、导入 id 重写、旧裸 id 迁移）
+- 端到端静态校验：36 → **51 项**（新增编队 DOM 契约、函数存在性、导出格式 v2、**「编队只存人」的结构断言**）
+- 真实页面测试（jsdom）：40 → **78 项**（新增保存 / 重复拒绝 / 一键载入 / 重命名 / 属性指纹 /
+  持久化 / 导入 / 空队伍拦截 / 自动填满 key 格式）
+  - 测试环境从 `file://` 改为**真实 http 源 + 自定义资源拦截器**（jsdom 30 的 `requestInterceptor`）：
+    `file://` 下源是 opaque origin，`localStorage` 直接抛异常，持久化行为此前完全测不到
+
 ## [2.1.0] - 2026-10-15
 
 ### 新增
@@ -78,7 +119,8 @@
 - 数据存 localStorage，关闭浏览器后仍在
 - 单文件 HTML、零依赖、零构建，双击即用
 
-[未发布]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.1.0...HEAD
+[未发布]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/releases/tag/v1.0.0

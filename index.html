@@ -195,6 +195,42 @@ main{
 .controls input[type=number]{width:74px;text-align:center;}
 .divider{width:1px;height:20px;background:var(--line);}
 
+/* ---------- 编队快捷位 ---------- */
+.team-presets{
+  display:flex;gap:7px;flex-wrap:wrap;align-items:center;
+  padding:10px 14px;border-bottom:1px solid var(--line);background:#0f131b;
+}
+.team-presets .lab{font-size:11.5px;color:var(--muted);white-space:nowrap;}
+.team-presets .tp-hint{font-size:11px;color:var(--muted);opacity:.7;margin-left:2px;}
+.tp{
+  display:flex;align-items:center;gap:6px;padding:5px 7px 5px 9px;border-radius:10px;
+  background:#131824;border:1px solid var(--line);cursor:pointer;transition:.15s;
+}
+.tp:hover{border-color:var(--accent);background:#1a2130;transform:translateY(-1px);}
+.tp.cur{border-color:var(--accent);background:rgba(255,138,0,.13);box-shadow:0 0 0 2px rgba(255,138,0,.1);}
+.tp .body{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.tp .nm{
+  font-size:12px;font-weight:600;max-width:132px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.tp .dots{display:flex;gap:2px;}
+.tp .dots i{width:12px;height:3px;border-radius:2px;display:block;flex:none;}
+.tp .ops{display:flex;gap:2px;opacity:0;transition:.15s;}
+.tp:hover .ops{opacity:1;}
+.tp.empty{border-style:dashed;color:var(--muted);font-size:11.5px;padding:8px 11px;}
+.tp.empty:hover{color:var(--accent2);border-color:var(--accent);border-style:solid;}
+/* 编队弹窗里的成员预览 */
+.tp-preview{
+  display:flex;flex-wrap:wrap;gap:5px;padding:9px;border-radius:10px;
+  background:#10141d;border:1px dashed var(--line);min-height:40px;
+}
+.tp-preview .mini{
+  display:flex;align-items:center;gap:5px;font-size:11.5px;
+  padding:3px 9px;border-radius:20px;background:#161c27;border:1px solid var(--line);
+}
+.tp-preview .mini b{width:7px;height:7px;border-radius:50%;display:block;flex:none;}
+.tp-preview .mini.empty{color:var(--muted);border-style:dashed;}
+
 /* ---------- 牌序条 ---------- */
 .deck-strip{display:flex;gap:6px;padding:11px 14px;flex-wrap:wrap;align-items:center;}
 .deck-strip .lab{font-size:11.5px;color:var(--muted);margin-right:2px;}
@@ -477,6 +513,9 @@ main{
       </div>
     </div>
 
+    <!-- 编队快捷位：一键换整套队伍 -->
+    <div class="team-presets" id="teamPresets"></div>
+
     <div class="panel-body">
       <div class="team-grid" id="teamGrid"></div>
       <div style="margin-top:9px;font-size:11.5px;color:var(--muted);">
@@ -557,6 +596,32 @@ main{
   </div>
 </div>
 
+<!-- ============ 编队命名弹窗 ============ -->
+<div class="mask" id="maskTeam">
+  <div class="modal">
+    <h3 id="teamModalTitle">保存当前编队</h3>
+    <div class="mbody">
+      <div class="field">
+        <label>编队名称 *</label>
+        <input id="teamName" maxlength="40" placeholder="例如：超赛队 / 主力队 / 打超激战">
+      </div>
+      <div class="field">
+        <label>包含角色（按初始槽位顺序）</label>
+        <div class="tp-preview" id="teamPreview"></div>
+      </div>
+      <div class="hint">
+        只保存「队伍里有哪 7 个人」和他们的初始槽位顺序。回合数与手动拖出来的排程不会被保存，
+        载入后会按初始顺序重新推演（可用「↺ 还原」之外的调整再自行微调）。<br>
+        编队与角色预设一起走「导出 / 导入预设库」，方便备份与跨设备迁移。
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="teamCancel">取消</button>
+      <button class="btn primary" id="teamConfirm">保存编队</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ 角色详情弹窗 ============ -->
 <div class="mask" id="maskDetail">
   <div class="modal wide">
@@ -600,8 +665,11 @@ main{
         粘贴 JSON 数组即可批量入库，同名角色自动跳过。后续接入 Wiki 抓取时，只需把抓到的数据整理成同样结构：<br><br>
         <code>[{ "name":"孙悟空（超4）", "type":"str", "rarity":"LR", "tags":["超赛"], "note":"…", "image":"https://…" }]</code><br><br>
         type 取值：<code>str</code> 力 / <code>agl</code> 速 / <code>teq</code> 技 / <code>int</code> 知 / <code>phy</code> 体 / <code>none</code> 无。<br>
-        另已暴露全局接口 <code>window.DokkanSorter</code>：<code>addPresets(arr)</code>、<code>getPresets()</code>、<code>setTeamByIds()</code>、<code>getState()</code>，
-        可在控制台或外部脚本中直接调用。
+        也支持完整的预设库备份：<code>{ "presets":[…], "teams":[…] }</code>，
+        其中 <code>teams</code> 为编队（每项形如 <code>{ "name":"超赛队", "members":["r:1000460", …7 项] }</code>），
+        导入时会自动把编队里指向自建卡的引用改成新 id。<br>
+        另已暴露全局接口 <code>window.DokkanSorter</code>：<code>addPresets()</code>、<code>saveTeam()</code>、<code>applyTeam()</code>、
+        <code>getTeams()</code>、<code>importBundle()</code>、<code>getState()</code> 等，可在控制台或外部脚本中直接调用。
       </div>
       <div class="field">
         <label>JSON 数据</label>
@@ -645,9 +713,18 @@ main{
         自建角色与收藏都保存在浏览器本地，可用「导出预设库 / 导入预设库」备份迁移。<br>
         数据来源：<b>DOKKAN.FYI</b>（社区数据库，robots.txt / llms.txt 允许引用）。链接技能与分类为官方繁中译名转简体，
         角色名由术语表逐词对照生成，可能与游戏内文本有出入；卡面称号保留英文原文。<br><br>
-        <b style="color:var(--accent2)">六、批量导入</b><br>
+        <b style="color:var(--accent2)">六、编队（队伍预设）</b><br>
+        队伍区顶部有一排<b>编队快捷位</b>。把当前 7 人存成一套编队后，点一下就能整套换人：
+        新编队用「＋ 存为编队」，每套编队上悬停可 <b>✎</b> 重命名、<b>✕</b> 删除；
+        编队右侧的小色条是这套队伍 7 个槽位的属性指纹，把鼠标停在上面可以看到完整名单。<br>
+        编队<b>只保存「队伍里有哪 7 个人」和他们的初始槽位顺序</b>，不保存回合数与手动拖出来的排程 ——
+        载入后会按初始顺序重新推演。当前队伍对应的那套编队会高亮显示。<br>
+        编队与角色预设一起保存在浏览器本地，也一起走「导出 / 导入预设库」，
+        导出的 JSON 里同时含 <code>presets</code> 与 <code>teams</code> 两段。<br><br>
+        <b style="color:var(--accent2)">七、批量导入</b><br>
         点顶部「导入预设库」→ 粘贴符合结构的 JSON 数组即可批量入库
         （字段：name / nameEn / title / type / typeEn / rarity / cls / tags / note / image / links / cats / released / sourceUrl）。
+        也可导入 <code>{ "presets":[…], "teams":[…] }</code> 形式的完整备份；旧版只有 <code>presets</code> 的文件同样兼容。
       </div>
     </div>
     <div class="modal-actions">
@@ -680,12 +757,14 @@ var TYPE_ORDER = ['str','agl','teq','int','phy','none'];
 var LS_PRESETS = 'dbs_sorter_presets_v1';
 var LS_STATE   = 'dbs_sorter_state_v1';
 var LS_SEEDED  = 'dbs_sorter_seeded_v1';
+var LS_TEAMS   = 'dbs_sorter_teams_v1';     // 编队（队伍预设）
 var DEFAULT_TURNS = 5;
 
 /* =======================================================
    状态
    ======================================================= */
 var presets = [];
+var teams = [];   // 编队：[{ id, name, members:[7 key|null], createdAt }]
 var state = {
   team : new Array(SLOTS).fill(null),   // 初始顺序（槽位 1..7 的角色 id）
   deck : new Array(SLOTS).fill(null),   // 当前牌序（对外推演的唯一依据）
@@ -705,7 +784,7 @@ var rarityFilter = 'all';
    ======================================================= */
 function $(sel, root){ return (root||document).querySelector(sel); }
 function $$(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
-function uid(){ return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function uid(prefix){ return (prefix || 'p') + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function esc(s){
   return String(s==null?'':s).replace(/[&<>"']/g, function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
@@ -805,28 +884,79 @@ function toast(msg){
 function save(){
   try{
     localStorage.setItem(LS_PRESETS, JSON.stringify(presets));
+    localStorage.setItem(LS_TEAMS, JSON.stringify(teams));
     localStorage.setItem(LS_STATE, JSON.stringify({
       team: state.team, deck: state.deck, turns: state.turns,
       turnCount: state.turnCount
     }));
   }catch(e){ /* 隐私模式等场景忽略 */ }
 }
-function fixArr(a){
+/* 编队成员 → 规整的 7 槽位队伍：只保留非空字符串 key，其余一律补空位 */
+function teamFromMembers(members){
   var out = new Array(SLOTS).fill(null);
-  if(Array.isArray(a)){ for(var i=0;i<SLOTS;i++){ out[i] = (typeof a[i]==='string' && a[i]) ? a[i] : null; } }
+  if(Array.isArray(members)){
+    for(var i=0;i<SLOTS;i++){ out[i] = (typeof members[i]==='string' && members[i]) ? members[i] : null; }
+  }
   return out;
 }
+/* 队伍指纹：先把裸 id 归一化成统一 key，再拼接。
+   这样「同一批角色」无论用哪种写法（含旧数据）都算出同一个指纹。 */
+function teamSignature(team){
+  return normalizeTeamKeys(team).map(function(k){ return k || '-'; }).join('|');
+}
+/* 旧数据里的裸 id 统一补成 "p:" 前缀，保证同一个角色只有一种写法
+   （否则「＋ 加入」写 p:xx、「自动填满」写 xx，会让同一套队伍算出两种指纹） */
+function normalizeTeamKeys(arr){
+  return teamFromMembers(arr).map(function(k){
+    if(typeof k === 'string' && k && k.indexOf('r:') !== 0 && k.indexOf('p:') !== 0) return 'p:' + k;
+    return k;
+  });
+}
+/* 导入时把编队成员里指向自建卡的旧 id 换成新 id（图鉴卡 r: 的 id 是稳定的，无需换） */
+function remapTeamMembers(members, idMap){
+  return teamFromMembers(members).map(function(k){
+    if(typeof k === 'string' && k.indexOf('p:') === 0 && idMap){
+      var nid = idMap[k.slice(2)];
+      if(nid) return 'p:' + nid;
+    }
+    return k;
+  });
+}
+/* 清洗外部（localStorage / 导入 JSON）来的编队数据 */
+function normalizeTeams(arr){
+  var out = [];
+  if(!Array.isArray(arr)) return out;
+  arr.forEach(function(t, i){
+    if(!t || typeof t !== 'object') return;
+    var members = teamFromMembers(t.members);
+    if(!members.some(Boolean)) return;                       // 全员空位的编队直接丢弃
+    out.push({
+      id: String(t.id || ('t' + i)),
+      name: String(t.name || ('编队 ' + (out.length + 1))).slice(0, 40),
+      members: members,
+      createdAt: String(t.createdAt || '')
+    });
+  });
+  return out;
+}
+function fixArr(a){ return teamFromMembers(a); }
 function load(){
   try{
     var p = JSON.parse(localStorage.getItem(LS_PRESETS) || 'null');
     if(Array.isArray(p)) presets = p;
   }catch(e){}
   try{
+    var tp = JSON.parse(localStorage.getItem(LS_TEAMS) || 'null');
+    teams = normalizeTeams(tp);
+  }catch(e){}
+  try{
     var s = JSON.parse(localStorage.getItem(LS_STATE) || 'null');
     if(s && typeof s === 'object'){
-      state.team = fixArr(s.team);
-      state.deck = fixArr(s.deck);
-      state.turns = Array.isArray(s.turns) ? s.turns.map(function(r){ return Array.isArray(r)?r.slice(0,3):[null,null,null]; }) : [];
+      state.team = normalizeTeamKeys(s.team);
+      state.deck = normalizeTeamKeys(s.deck);
+      state.turns = Array.isArray(s.turns)
+        ? s.turns.map(function(r){ return normalizeTeamKeys(r).slice(0,3); })
+        : [];
       state.turnCount = Math.max(1, parseInt(s.turnCount,10) || DEFAULT_TURNS);
     }
   }catch(e){}
@@ -1215,6 +1345,41 @@ function renderTeam(){
   }).join('');
 }
 
+/* 编队快捷位：点一下整套载入 */
+function renderTeamPresets(){
+  var box = $('#teamPresets');
+  if(!box) return;
+  var cur = teamSignature(state.team);
+  var html = '<span class="lab">编队</span>';
+
+  html += teams.map(function(t){
+    var isCur = teamSignature(t.members) === cur;
+    var dots = t.members.map(function(k){
+      var c = resolve(k);
+      return '<i style="background:' + (c ? typeOf(c.type).color : '#39435a') + '"></i>';
+    }).join('');
+    var tip = t.members.map(function(k, i){
+      var c = resolve(k);
+      return (i+1) + '. ' + (c ? dispName(c) : (k ? '（已移除）' : '空位'));
+    }).join('&#10;');
+    return '<span class="tp' + (isCur ? ' cur' : '') + '" data-id="' + esc(t.id) + '" ' +
+        'title="点击载入编队：' + esc(t.name) + '&#10;&#10;' + tip + '">' +
+      '<span class="body">' +
+        '<span class="nm">' + esc(t.name) + '</span>' +
+        '<span class="dots">' + dots + '</span>' +
+      '</span>' +
+      '<span class="ops">' +
+        '<button class="icon-btn" data-act="tp-rename" data-id="' + esc(t.id) + '" title="重命名">✎</button>' +
+        '<button class="icon-btn del" data-act="tp-del" data-id="' + esc(t.id) + '" title="删除">✕</button>' +
+      '</span>' +
+    '</span>';
+  }).join('');
+
+  html += '<button class="tp empty" id="btnTeamSave" title="把当前队伍存为一套编队">＋ 存为编队</button>';
+  if(teams.length) html += '<span class="tp-hint">点编队即可整套载入</span>';
+  box.innerHTML = html;
+}
+
 /* =======================================================
    渲染：牌序条
    ======================================================= */
@@ -1337,6 +1502,7 @@ function renderAll(){
   renderLegend();
   renderLibrary();
   renderTeam();
+  renderTeamPresets();
   renderTurns();
   renderSummary();
   renderDeckStrip();
@@ -1441,6 +1607,129 @@ function unkeepFromMine(key){
   save(); renderAll();
   toast('已从「我的」移除：' + nm);
 }
+
+/* =======================================================
+   编队（队伍预设）：保存 / 载入 / 重命名 / 删除
+   只记「队伍里有哪 7 个人」+ 初始槽位顺序，不含回合排程
+   ======================================================= */
+var editingTeamId = null;
+
+function teamById(id){
+  for(var i=0;i<teams.length;i++){ if(teams[i].id === id) return teams[i]; }
+  return null;
+}
+function autoTeamName(){
+  var n = 1;
+  while(teams.some(function(t){ return t.name === '编队 ' + n; })) n++;
+  return '编队 ' + n;
+}
+/* 载入编队：按其初始顺序重新推演（手动拖出来的排程不复原，符合「只存人」的约定） */
+function applyTeamPreset(id){
+  var t = teamById(id);
+  if(!t){ toast('编队不存在'); return; }
+  if(teamSignature(state.team) === teamSignature(t.members)){
+    toast('当前队伍已经是「' + t.name + '」'); return;
+  }
+  state.team = teamFromMembers(t.members);
+  rebuild();                                  // 内部会 save + renderAll
+  toast('已载入编队「' + t.name + '」');
+}
+function removeTeamPreset(id){
+  var t = teamById(id);
+  if(!t) return;
+  if(!confirm('确定删除编队「' + t.name + '」？\n（不会影响当前队伍）')) return;
+  teams = teams.filter(function(x){ return x.id !== id; });
+  save(); renderTeamPresets();
+  toast('已删除编队「' + t.name + '」');
+}
+/* id 为空 = 新建；传 id = 重命名 */
+function openTeamModal(id){
+  editingTeamId = id || null;
+  var t = editingTeamId ? teamById(editingTeamId) : null;
+  if(editingTeamId && !t){ toast('编队不存在'); return; }
+
+  var members = teamFromMembers(t ? t.members : state.team);
+  $('#teamModalTitle').textContent = t ? '重命名编队' : '保存当前编队';
+  $('#teamName').value = t ? t.name : autoTeamName();
+  $('#teamConfirm').textContent = t ? '保存名称' : '保存编队';
+  $('#teamPreview').innerHTML = members.map(function(k, i){
+    var c = resolve(k);
+    var col = c ? typeOf(c.type).color : '#39435a';
+    return '<span class="mini' + (c ? '' : ' empty') + '">' +
+        '<b style="background:' + col + '"></b>' +
+        (i+1) + '. ' + esc(c ? dispName(c) : (k ? '（已移除）' : '空位')) +
+      '</span>';
+  }).join('');
+  $('#maskTeam').classList.add('on');
+  setTimeout(function(){ $('#teamName').focus(); $('#teamName').select(); }, 30);
+}
+function confirmTeamModal(){
+  var name = $('#teamName').value.trim().slice(0, 40);
+  if(!name){ toast('请先填一个编队名称'); $('#teamName').focus(); return; }
+
+  if(editingTeamId){
+    var t = teamById(editingTeamId);
+    if(!t){ $('#maskTeam').classList.remove('on'); return; }
+    if(teams.some(function(x){ return x.id !== t.id && x.name === name; })){ toast('已有同名编队，换个名字'); return; }
+    t.name = name;
+    save(); renderTeamPresets();
+    toast('已重命名为「' + name + '」');
+    $('#maskTeam').classList.remove('on');
+    return;
+  }
+
+  var members = teamFromMembers(state.team);
+  if(!members.some(Boolean)){ toast('队伍还是空的，先从左侧选几个角色'); return; }
+  var sig = teamSignature(members);
+  var dup = teams.filter(function(x){ return teamSignature(x.members) === sig; })[0];
+  if(dup){
+    editingTeamId = null;
+    $('#maskTeam').classList.remove('on');
+    toast('这套编队已存在：「' + dup.name + '」');
+    return;
+  }
+  if(teams.some(function(x){ return x.name === name; })){ toast('已有同名编队，换个名字'); return; }
+
+  teams.push({ id: uid('t'), name: name, members: members, createdAt: new Date().toISOString() });
+  save(); renderTeamPresets();
+  toast('已保存编队「' + name + '」');
+  $('#maskTeam').classList.remove('on');
+}
+/* 从外部（导入 JSON）批量入库编队，同名跳过 */
+function importTeamArray(arr){
+  var incoming = normalizeTeams(arr);
+  if(!incoming.length) return 0;
+  var exist = {};
+  teams.forEach(function(t){ exist[t.name] = true; });
+  var added = 0;
+  incoming.forEach(function(t){
+    if(exist[t.name]) return;
+    teams.push({ id: uid('t'), name: t.name, members: t.members, createdAt: t.createdAt || new Date().toISOString() });
+    exist[t.name] = true;
+    added++;
+  });
+  if(added){ save(); renderAll(); }
+  return added;
+}
+
+$('#teamPresets').addEventListener('click', function(e){
+  var btn = e.target.closest('.icon-btn');
+  if(btn){
+    e.stopPropagation();
+    if(btn.dataset.act === 'tp-del') removeTeamPreset(btn.dataset.id);
+    else if(btn.dataset.act === 'tp-rename') openTeamModal(btn.dataset.id);
+    return;
+  }
+  if(e.target.closest('#btnTeamSave')){ openTeamModal(null); return; }
+  var tp = e.target.closest('.tp');
+  if(tp && tp.dataset.id) applyTeamPreset(tp.dataset.id);
+});
+$('#teamCancel').addEventListener('click', function(){ $('#maskTeam').classList.remove('on'); });
+$('#teamConfirm').addEventListener('click', confirmTeamModal);
+$('#teamName').addEventListener('keydown', function(e){
+  if(e.key === 'Enter'){ e.preventDefault(); confirmTeamModal(); }
+});
+$('#maskTeam').addEventListener('click', function(e){ if(e.target === this) this.classList.remove('on'); });
 
 /* =======================================================
    事件：把角色拖到指定回合（反推前置排序）
@@ -1798,7 +2087,7 @@ $('#btnAutoFill').addEventListener('click', function(){
   }
   var k = 0;
   for(var s=0; s<SLOTS; s++){
-    if(!state.team[s] && k < pool.length) state.team[s] = pool[k++].id;
+    if(!state.team[s] && k < pool.length) state.team[s] = 'p:' + pool[k++].id;   // 统一 key，勿写裸 id
   }
   rebuild(); toast('已用预设角色填补空位');
 });
@@ -1896,8 +2185,11 @@ function download(filename, text){
 }
 $('#btnExportPresets').addEventListener('click', function(){
   download('dokkan-presets-' + new Date().toISOString().slice(0,10) + '.json',
-    JSON.stringify({ type:'dbs-sorter-presets', version:1, exportedAt:new Date().toISOString(), presets:presets }, null, 2));
-  toast('预设库已导出');
+    JSON.stringify({
+      type:'dbs-sorter-presets', version:2, exportedAt:new Date().toISOString(),
+      presets:presets, teams:teams
+    }, null, 2));
+  toast('已导出 ' + presets.length + ' 个角色 · ' + teams.length + ' 套编队');
 });
 $('#btnImportPresets').addEventListener('click', function(){ $('#maskWiki').classList.add('on'); });
 $('#wikiCancel').addEventListener('click', function(){ $('#maskWiki').classList.remove('on'); });
@@ -1908,6 +2200,7 @@ $('#maskHelp').addEventListener('click', function(e){ if(e.target === this) this
 
 function importPresetArray(arr, opts){
   opts = opts || {};
+  var idMap = opts.idMap || null;      // 旧卡 id → 新卡 id，供编队重写引用
   if(!Array.isArray(arr)) return 0;
   var exist = {};
   presets.forEach(function(p){ exist[p.name] = true; });
@@ -1915,7 +2208,14 @@ function importPresetArray(arr, opts){
   arr.forEach(function(o){
     if(!o) return;
     var name = String(o.name || o.title || '').trim();
-    if(!name || exist[name]) return;
+    if(!name || exist[name]){
+      // 已存在同名：把旧 id 映射到已存在的那张卡，保证编队里指向自建卡的引用不断
+      if(idMap && o.id){
+        var same = presets.filter(function(p){ return p.name === name; })[0];
+        if(same) idMap[String(o.id)] = same.id;
+      }
+      return;
+    }
     var type = String(o.type || 'none').toLowerCase();
     if(TYPE_ORDER.indexOf(type) < 0){
       // 兼容中文/英文属性写法
@@ -1923,8 +2223,9 @@ function importPresetArray(arr, opts){
                     'STR':'str','AGL':'agl','TEQ':'teq','INT':'int','PHY':'phy' };
       type = alias[o.type] || alias[String(o.type||'').toUpperCase()] || 'none';
     }
+    var newId = uid();
     presets.push({
-      id: uid(),
+      id: newId,
       name: name,
       nameEn: String(o.nameEn || o.name_en || '').trim(),
       title: String(o.title || '').trim(),
@@ -1941,21 +2242,53 @@ function importPresetArray(arr, opts){
       sourceUrl: String(o.sourceUrl || ''),
       source: opts.source || 'import'
     });
+    if(idMap && o.id) idMap[String(o.id)] = newId;
     exist[name] = true;
     added++;
   });
   if(added){ save(); renderAll(); }
   return added;
 }
+
+/* 统一导入入口：兼容「纯数组」与「{ presets, teams }」两种结构 */
+function importBundle(data){
+  var arr  = Array.isArray(data) ? data : (Array.isArray(data && data.presets) ? data.presets : null);
+  var tarr = (!Array.isArray(data) && data && Array.isArray(data.teams)) ? data.teams : null;
+  if(!arr && !tarr) return null;                       // 结构不合法
+  var idMap = {};
+  var n  = (arr  && arr.length)  ? importPresetArray(arr, { source:'import', idMap:idMap }) : 0;
+  var nt = 0;
+  if(tarr && tarr.length){
+    // 编队里的自建卡引用需要跟着换 id，否则导入后会变成「（已移除）」
+    var fixed = tarr.map(function(t){
+      if(!t || typeof t !== 'object') return t;
+      return { id:t.id, name:t.name, members:remapTeamMembers(t.members, idMap), createdAt:t.createdAt };
+    });
+    nt = importTeamArray(fixed);
+  }
+  if(n || nt) renderAll();
+  return {
+    chars: { ok:n,  total: arr  ? arr.length  : 0 },
+    teams: { ok:nt, total: tarr ? tarr.length : 0 }
+  };
+}
+function importResultText(r){
+  if(!r) return '结构不正确：需要 JSON 数组，或含 presets / teams 字段的对象';
+  var parts = [];
+  if(r.chars.total) parts.push(r.chars.ok + '/' + r.chars.total + ' 个角色');
+  if(r.teams.total) parts.push(r.teams.ok + '/' + r.teams.total + ' 套编队');
+  if(!parts.length) return '文件里没有可导入的内容';
+  if(!r.chars.ok && !r.teams.ok) return '没有新增内容（可能全部重名）';
+  return '成功导入 ' + parts.join('、') + '（重名的已跳过）';
+}
 $('#wikiImport').addEventListener('click', function(){
   var raw = $('#wikiJson').value.trim();
   if(!raw){ toast('请先粘贴 JSON 数据'); return; }
   var data;
   try{ data = JSON.parse(raw); }catch(e){ toast('JSON 解析失败：' + e.message); return; }
-  var arr = Array.isArray(data) ? data : (Array.isArray(data.presets) ? data.presets : null);
-  if(!arr){ toast('需要是数组，或含 presets 字段的对象'); return; }
-  var n = importPresetArray(arr, { source:'import' });
-  toast(n ? ('成功导入 ' + n + ' 个角色' + (n < arr.length ? '（' + (arr.length-n) + ' 个重名已跳过）' : '')) : '没有新增角色（可能全部重名）');
+  var r = importBundle(data);
+  if(!r){ toast(importResultText(null)); return; }
+  toast(importResultText(r));
   $('#wikiJson').value = '';
   $('#maskWiki').classList.remove('on');
 });
@@ -1977,10 +2310,9 @@ $('#filePresets').addEventListener('change', function(e){
   reader.onload = function(){
     var data;
     try{ data = JSON.parse(String(reader.result || '')); }catch(err){ toast('文件不是有效 JSON'); return; }
-    var arr = Array.isArray(data) ? data : (Array.isArray(data.presets) ? data.presets : null);
-    if(!arr){ toast('文件结构不正确'); return; }
-    var n = importPresetArray(arr, { source:'import' });
-    toast(n ? ('成功导入 ' + n + ' 个角色') : '没有新增角色（可能全部重名）');
+    var r = importBundle(data);
+    if(!r){ toast(importResultText(null)); return; }
+    toast(importResultText(r));
   };
   reader.readAsText(f, 'utf-8');
   e.target.value = '';
@@ -2079,7 +2411,7 @@ $('#btnLang').addEventListener('click', function(){
    对外接口（为后续 Wiki 抓取预留）
    ======================================================= */
 window.DokkanSorter = {
-  version: '2.1.0',
+  version: '2.2.0',
   typeMap: TYPES,
   /* --- 图鉴 --- */
   getRoster: function(){ return roster.slice(); },
@@ -2120,6 +2452,29 @@ window.DokkanSorter = {
     state.team = fixArr(keys); rebuild(); return state.team;
   },
   getState: function(){ return JSON.parse(JSON.stringify(state)); },
+  /* ---- 编队（队伍预设）---- */
+  getTeams: function(){ return JSON.parse(JSON.stringify(teams)); },
+  addTeams: function(arr){ return importTeamArray(arr); },
+  saveTeam: function(name){
+    var members = teamFromMembers(state.team);
+    if(!members.some(Boolean)) return null;
+    name = String(name || autoTeamName()).trim().slice(0, 40);
+    if(!name) return null;
+    if(teams.some(function(t){ return t.name === name; })) return null;
+    var t = { id: uid('t'), name: name, members: members, createdAt: new Date().toISOString() };
+    teams.push(t); save(); renderTeamPresets();
+    return JSON.parse(JSON.stringify(t));
+  },
+  applyTeam: function(id){ if(!teamById(id)) return false; applyTeamPreset(id); return true; },
+  removeTeam: function(id){
+    if(!teamById(id)) return false;
+    teams = teams.filter(function(t){ return t.id !== id; });
+    save(); renderTeamPresets();
+    return true;
+  },
+  getTeamSignature: function(){ return teamSignature(state.team); },
+  /* ---- 通用导入 ---- */
+  importBundle: function(data){ return importBundle(data); },
   getPlan: function(){
     return state.turns.map(function(row, t){
       return { turn: t+1, slots: slotLabels(t), names: row.map(function(id){ return nameOf(id); }) };

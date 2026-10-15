@@ -1,7 +1,7 @@
 // 真实 DOM 加载测试（jsdom）：验证页面能跑起来 + 星标收藏 + 拖拽反推交互
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 // jsdom 解析：优先按常规 node_modules 查找，兼容本机托管工作区
@@ -16,7 +16,7 @@ function loadJsdom() {
   console.error('未找到 jsdom。请先安装：npm install --no-save jsdom');
   process.exit(2);
 }
-const { JSDOM, VirtualConsole } = loadJsdom();
+const { JSDOM, VirtualConsole, requestInterceptor } = loadJsdom();
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FILE = path.join(ROOT, 'index.html');
@@ -30,11 +30,40 @@ const vc = new VirtualConsole();
 vc.on('jsdomError', (e) => { if (!/localStorage|opaque/i.test(String(e.message))) errors.push(e.message); });
 vc.on('error', (...a) => errors.push(a.join(' ')));
 
-const dom = await JSDOM.fromFile(FILE, {
+/* 用真实 http 源加载页面。
+   原因：jsdom 从 file:// 加载时源是 opaque origin，localStorage 一访问就抛 SecurityError，
+   页面的 save() 只能静默失败 —— 于是「持久化」相关的行为根本测不到。
+   这里给一个假源 http://localhost/，并把 roster.js 从磁盘读出来喂给页面：
+   既不需要起服务器、也不联网，localStorage 又能真正工作。 */
+const LOCAL_ORIGIN = 'http://localhost';
+const intercept = requestInterceptor((request) => {
+  let u;
+  try { u = new URL(request.url); } catch { return new Response('', { status: 200 }); }
+
+  if (u.origin !== LOCAL_ORIGIN) {
+    // 外部资源（CDN 头像等）不加载，也不联网：返回空 200，避免制造资源加载错误
+    return new Response('', { status: 200 });
+  }
+  const rel = decodeURIComponent(u.pathname).replace(/^\/+/, '');
+  const file = path.resolve(ROOT, rel);
+  if (!file.startsWith(ROOT)) return new Response('', { status: 403 });   // 防目录穿越
+  try {
+    const isJs = /\.m?js$/.test(file);
+    return new Response(fs.readFileSync(file), {
+      status: 200,
+      headers: { 'Content-Type': isJs ? 'application/javascript' : 'application/octet-stream' },
+    });
+  } catch {
+    return new Response('', { status: 404 });
+  }
+});
+
+const dom = new JSDOM(fs.readFileSync(FILE, 'utf8'), {
+  url: LOCAL_ORIGIN + '/',
   runScripts: 'dangerously',
-  resources: 'usable',
   pretendToBeVisual: true,
   virtualConsole: vc,
+  resources: { interceptors: [intercept] },
 });
 const win = dom.window, doc = win.document;
 
@@ -209,10 +238,102 @@ ok($$('#deckStrip .chip')[0].draggable === true, '牌序条槽位可拖拽');
   ok(/\d+\s*回合/.test($('#roundInfo').textContent), `回合信息：${$('#roundInfo').textContent}`);
 }
 
-/* ---------- 5. 全局不变量 ---------- */
+/* ---------- 5. 编队（队伍预设） ---------- */
+{
+  win.confirm = () => true;                       // jsdom 未实现 confirm，测试里一律放行
+
+  const team0 = DS.getState().team.slice();
+  ok($$('#teamPresets .tp[data-id]').length === 0, '初始没有任何编队');
+  ok(!!$('#btnTeamSave'), '编队快捷位上有「＋ 存为编队」按钮');
+
+  /* --- 保存 --- */
+  $('#btnTeamSave').click();
+  ok($('#maskTeam').classList.contains('on'), '点「存为编队」弹出命名弹窗');
+  const preview = $$('#teamPreview .mini');
+  ok(preview.length === 7, `弹窗列出 7 个槽位（${preview.length}）`);
+  ok(preview.every(m => /\d\./.test(m.textContent)), '预览每项都带槽位序号');
+  ok(/^编队 \d+$/.test($('#teamName').value), `默认名称自动生成：${$('#teamName').value}`);
+  ok(preview.every(m => !/已移除/.test(m.textContent)), '预览里没有解析失败的角色');
+
+  $('#teamName').value = '超赛队';
+  $('#teamConfirm').click();
+  ok(!$('#maskTeam').classList.contains('on'), '保存后弹窗自动关闭');
+  let chips = $$('#teamPresets .tp[data-id]');
+  ok(chips.length === 1, `快捷位出现 1 套编队（${chips.length}）`);
+  ok(chips[0].querySelector('.nm').textContent === '超赛队', '编队名显示正确');
+  ok(chips[0].classList.contains('cur'), '当前队伍对应的编队高亮为「当前」');
+  ok(chips[0].querySelectorAll('.dots i').length === 7, '编队带 7 格属性指纹');
+  ok(DS.getTeams().length === 1, 'window.DokkanSorter.getTeams() 能读到编队');
+  const lsRaw = win.localStorage.getItem('dbs_sorter_teams_v1') || '';
+  ok(lsRaw.length > 0, '编队已真正写入 localStorage');
+  ok(/"members"/.test(lsRaw), 'localStorage 里的编队带有 members 字段');
+  ok(!/"turns"|"deck"|turnCount/.test(lsRaw), '编队里只有成员，不含回合排程');
+
+  /* --- 同一套编队不重复入库 --- */
+  $('#btnTeamSave').click();
+  $('#teamName').value = '重复的';
+  $('#teamConfirm').click();
+  ok(DS.getTeams().length === 1, '同一套编队不会重复保存');
+  ok(/已存在/.test($('#toast').textContent), `重复时给出提示：${$('#toast').textContent}`);
+  ok(!$('#maskTeam').classList.contains('on'), '重复时也会关掉弹窗');
+
+  /* --- 清空队伍 → 点编队一键载入 --- */
+  $('#btnClearTeam').click();
+  ok(DS.getState().team.every(x => x === null), '「清空」后队伍为空');
+  chips = $$('#teamPresets .tp[data-id]');
+  ok(!chips[0].classList.contains('cur'), '队伍清空后编队不再标记「当前」');
+  chips[0].click();
+  const back = DS.getState();
+  ok(JSON.stringify(back.team) === JSON.stringify(team0), '点编队一键载入 → 7 人与初始顺序完全恢复');
+  ok(back.turns.length > 0 && back.turns[0].filter(Boolean).length > 0, '载入后回合按初始顺序重新推演');
+  ok(/已载入编队/.test($('#toast').textContent), `载入有提示：${$('#toast').textContent}`);
+  ok($$('#teamPresets .tp.cur').length === 1, '载入后该编队重新高亮');
+
+  /* --- 重命名 --- */
+  const rid = DS.getTeams()[0].id;
+  const renBtn = $(`#teamPresets .tp[data-id="${rid}"] [data-act="tp-rename"]`);
+  ok(!!renBtn, '编队上有重命名按钮');
+  renBtn.click();
+  ok($('#teamName').value === '超赛队', '重命名弹窗预填当前名称');
+  $('#teamName').value = '超赛主力';
+  $('#teamConfirm').click();
+  ok(DS.getTeams()[0].name === '超赛主力', '重命名已生效');
+  ok($$('#teamPresets .tp.cur')[0].querySelector('.nm').textContent === '超赛主力', '快捷位同步刷新');
+
+  /* --- 「自动填满」必须写入统一 key（防回归：曾写裸 id） --- */
+  DS.removeTeam(rid);
+  ok(DS.getTeams().length === 0, 'removeTeam() 可删除编队');
+  $('#btnClearTeam').click();
+  $('#btnAutoFill').click();
+  const filled = DS.getState().team.filter(Boolean);
+  ok(filled.length > 0 && filled.every(k => /^(p|r):/.test(k)), `自动填满写入统一 key：${filled.slice(0, 2).join(' / ')} …`);
+
+  /* --- 空队伍不允许存 --- */
+  $('#btnClearTeam').click();
+  $('#btnTeamSave').click();
+  $('#teamConfirm').click();
+  ok(DS.getTeams().length === 0, '空队伍不允许存成编队');
+  ok(/空的/.test($('#toast').textContent), `空队伍给出提示：${$('#toast').textContent}`);
+  $('#teamCancel').click();
+  ok(!$('#maskTeam').classList.contains('on'), '「取消」可关闭弹窗');
+
+  /* --- 导入：编队与角色一起走 importBundle --- */
+  const r = DS.importBundle({ presets: [], teams: [{ name: '导入队', members: team0 }] });
+  ok(r && r.teams.ok === 1, `importBundle 支持 teams 段（成功 ${r && r.teams.ok} 套）`);
+  chips = $$('#teamPresets .tp[data-id]');
+  ok(chips.length === 1 && chips[0].querySelector('.nm').textContent === '导入队', '导入的编队出现在快捷位');
+  ok(DS.importBundle('oops') === null, '结构非法时 importBundle 返回 null');
+  DS.removeTeam(DS.getTeams()[0].id);
+
+  // 还原成测试开头那套队伍，后面的全局不变量检查需要一个满编状态
+  DS.setTeamByIds(team0);
+  ok(DS.getState().team.filter(Boolean).length === 7, '测试收尾：队伍已还原为满编 7 人');
+}
+
+/* ---------- 6. 全局不变量 ---------- */
 {
   const st = DS.getState();
-  const rowsOk = st.turns.every(r => r.length === 3 && new Set(r).size === r.filter(Boolean).length);
+  const rowsOk = st.turns.every(r => r.length === 3 && new Set(r.filter(Boolean)).size === r.filter(Boolean).length);
   ok(rowsOk, '所有回合的三人互不重复');
   ok(st.turns.every(r => r.every(x => x === null || st.deck.includes(x))), '回合中出现的角色都能在牌序里找到');
   ok($('#dragHint').classList.contains('on') === false || true, '提示条可用');

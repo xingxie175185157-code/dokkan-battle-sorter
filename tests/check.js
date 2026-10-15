@@ -21,8 +21,9 @@ const prelude = `
 var SLOTS = 7;
 var TYPES = {str:{name:'力'},agl:{name:'速'},teq:{name:'技'},int:{name:'知'},phy:{name:'体'},none:{name:'无'}};
 var TYPE_ORDER = ['str','agl','teq','int','phy','none'];
-var LS_PRESETS='a', LS_STATE='b', DEFAULT_TURNS=5;
+var LS_PRESETS='a', LS_STATE='b', LS_SEEDED='c', LS_TEAMS='d', DEFAULT_TURNS=5;
 var presets = [];
+var teams = [];
 var state = { team:new Array(7).fill(null), deck:new Array(7).fill(null), turns:[], turnCount:5 };
 function $(s){ return { classList:{add:function(){},remove:function(){}}, textContent:'', value:'', innerHTML:'' }; }
 function $$(s){ return []; }
@@ -41,6 +42,10 @@ module.exports = {
   rebuild: rebuild, ensureTurns: ensureTurns, setTurnOrder: setTurnOrder, swapInTurn: swapInTurn,
   planPlacement: planPlacement, applyPlacement: applyPlacement,
   reachableSlots: reachableSlots, goodSets: goodSets,
+  teamFromMembers: teamFromMembers, teamSignature: teamSignature,
+  normalizeTeams: normalizeTeams, remapTeamMembers: remapTeamMembers,
+  normalizeTeamKeys: normalizeTeamKeys,
+  fixArr: fixArr,
   seed: seedPresets,
   setPresets: function(a){ presets.length = 0; a.forEach(function(x){ presets.push(x); }); },
   names: function(row){ return row.map(function(id){ return (byId(id)||{}).name || '空'; }).join('-'); }
@@ -295,6 +300,72 @@ reset(12);
   eq(infeasible > 0, true, '其中确实存在不可行的组合（会被拒绝并提示）');
   eq(JSON.stringify({t:E.state.team, d:E.state.deck, r:E.state.turns, n:E.state.turnCount}) === before,
      true, '穷举试算后状态零改动（纯函数）');
+}
+
+/* ---- 用例22：编队成员规整（teamFromMembers）---- */
+{
+  // 注意：数组里含 null 时 .join(',') 会把 null 渲染成空串，故统一用 JSON.stringify 比对
+  const J = (a) => JSON.stringify(a);
+  eq(E.teamFromMembers(['p1','p2','p3','p4','p5','p6','p7']).join(','),
+     'p1,p2,p3,p4,p5,p6,p7', '7 人编队原样保留');
+  eq(J(E.teamFromMembers(['p1', null, '', 0, {}, 'p6'])),
+     J(['p1',null,null,null,null,'p6',null]),   '非法成员值一律补空位（不写入 0 / {} / 空串）');
+  eq(E.teamFromMembers(['p1','p2','p3','p4','p5','p6','p7','p8']).length, 7,
+     '超过 7 个的多余成员被截断');
+  eq(E.teamFromMembers(['p1','p2','p3']).length, 7, '不足 7 个时补足到 7 个槽位');
+  eq(J(E.teamFromMembers(null)), J([null,null,null,null,null,null,null]), '非数组输入安全退化');
+  eq(E.teamFromMembers('p1p2p3').some(Boolean), false, '字符串输入不会被误当成成员列表');
+}
+
+/* ---- 用例23：队伍指纹（teamSignature）---- */
+{
+  eq(E.teamSignature(['p1','p2','p3','p4','p5','p6','p7']),
+     E.teamSignature(['p1','p2','p3','p4','p5','p6','p7']), '同一队伍指纹一致');
+  eq(E.teamSignature(['p1','p2','p3','p4','p5','p6','p7']) ===
+     E.teamSignature(['p2','p1','p3','p4','p5','p6','p7']), false, '顺序不同 → 指纹不同（编队含初始顺序）');
+  eq(E.teamSignature([null,null,null,null,null,null,null]),
+     E.teamSignature([undefined,'',null]), true, '空队伍的指纹稳定（用于「当前是否已保存」判断）');
+}
+
+/* ---- 用例24：外部编队数据清洗（normalizeTeams）---- */
+{
+  const J = (a) => JSON.stringify(a);
+  const t = E.normalizeTeams([
+    { id:'t1', name:'超赛队', members:['p1','p2','p3','p4','p5','p6','p7'] },
+    { name:'全空队', members:[null,null,null,null,null,null,null] },
+    null, 'not-an-object',
+    { members:['p1'] },                                   // 缺 name
+  ]);
+  eq(t.length, 2, '清洗后保留 2 套（丢弃全空位与结构非法项）');
+  eq(t[0].name, '超赛队',          '有效编队保留名称');
+  eq(t[1].name, '编队 2',          '缺名称时按输出位置补默认名');
+  eq(J(t[1].members), J(['p1',null,null,null,null,null,null]), '缺名称的编队成员同样被规整');
+  const long = E.normalizeTeams([{ name:'x'.repeat(80), members:['p1'] }]);
+  eq(long[0].name.length, 40, '名称超长被截断到 40 字');
+  eq(E.normalizeTeams('oops').length, 0, '非数组输入返回空集合');
+}
+
+/* ---- 用例25：导入时编队引用的 id 重写（remapTeamMembers）---- */
+{
+  const J = (a) => JSON.stringify(a);
+  const map = { oldA:'newA', oldB:'newB' };
+  eq(J(E.remapTeamMembers(['p:oldA','r:1000460','p:oldB','p:unknown'], map)),
+     J(['p:newA','r:1000460','p:newB','p:unknown',null,null,null]),
+     '自建卡 p: 引用被换成新 id，图鉴卡 r: 与未知引用保持不变');
+  eq(J(E.remapTeamMembers(['p:oldA'], {})), J(['p:oldA',null,null,null,null,null,null]), '空映射表不做改动');
+  eq(J(E.remapTeamMembers([null,'p:oldA'], null)), J([null,'p:oldA',null,null,null,null,null]), '缺映射表时安全返回');
+}
+
+/* ---- 用例26：旧裸 id 迁移为统一 key（normalizeTeamKeys）---- */
+{
+  const J = (a) => JSON.stringify(a);
+  eq(J(E.normalizeTeamKeys(['abc','r:1000460','p:def',null])),
+     J(['p:abc','r:1000460','p:def',null,null,null,null]),
+     '裸 id 补 p: 前缀；r: / p: 前缀原样保留');
+  eq(E.teamSignature(['abc','r:1','','x','y','z','w']),
+     E.teamSignature(['p:abc','r:1',null,'p:x','p:y','p:z','p:w']),
+     '迁移前后指纹一致（同一角色只有一种写法）');
+  eq(J(E.normalizeTeamKeys(false)), J([null,null,null,null,null,null,null]), '非数组输入安全退化');
 }
 
 console.log('\n结果: ' + pass + ' 通过 / ' + fail + ' 失败');
