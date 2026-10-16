@@ -24,7 +24,7 @@ var TYPE_ORDER = ['str','agl','teq','int','phy','none'];
 var LS_PRESETS='a', LS_STATE='b', LS_SEEDED='c', LS_TEAMS='d', DEFAULT_TURNS=5;
 var presets = [];
 var teams = [];
-var state = { team:new Array(7).fill(null), deck:new Array(7).fill(null), turns:[], turnCount:5 };
+var state = { team:new Array(7).fill(null), deck:new Array(7).fill(null), turns:[], turnCount:5, leader:null, friend:null };
 function $(s){ return { classList:{add:function(){},remove:function(){}}, textContent:'', value:'', innerHTML:'' }; }
 function $$(s){ return []; }
 function esc(s){ return String(s==null?'':s); }
@@ -46,6 +46,8 @@ module.exports = {
   normalizeTeams: normalizeTeams, remapTeamMembers: remapTeamMembers,
   normalizeTeamKeys: normalizeTeamKeys,
   fixArr: fixArr,
+  normRoleKey: normRoleKey, normalizeRoles: normalizeRoles, syncRoles: syncRoles,
+  teamFullSignature: teamFullSignature, currentTeamObj: currentTeamObj, remapRoleKey: remapRoleKey,
   seed: seedPresets,
   setPresets: function(a){ presets.length = 0; a.forEach(function(x){ presets.push(x); }); },
   names: function(row){ return row.map(function(id){ return (byId(id)||{}).name || '空'; }).join('-'); }
@@ -343,6 +345,10 @@ reset(12);
   const long = E.normalizeTeams([{ name:'x'.repeat(80), members:['p1'] }]);
   eq(long[0].name.length, 40, '名称超长被截断到 40 字');
   eq(E.normalizeTeams('oops').length, 0, '非数组输入返回空集合');
+  const wr = E.normalizeTeams([{ name:'带标记', members:['p:1','p:2'], leader:'p:1', friend:'p:2' }]);
+  eq(wr[0].leader + '/' + wr[0].friend, 'p:1/p:2', '编队清洗后保留队长/好友标记');
+  const br = E.normalizeTeams([{ name:'坏标记', members:['p:1'], leader:'p:9', friend:'p:9' }]);
+  eq(J([br[0].leader, br[0].friend]), J([null,null]), '标记不在成员里 → 清洗时一律置空');
 }
 
 /* ---- 用例25：导入时编队引用的 id 重写（remapTeamMembers）---- */
@@ -366,6 +372,70 @@ reset(12);
      E.teamSignature(['p:abc','r:1',null,'p:x','p:y','p:z','p:w']),
      '迁移前后指纹一致（同一角色只有一种写法）');
   eq(J(E.normalizeTeamKeys(false)), J([null,null,null,null,null,null,null]), '非数组输入安全退化');
+}
+
+/* ---- 用例27：队长 / 好友规整（normalizeRoles）---- */
+{
+  const J = (a) => JSON.stringify(a);
+  const team = ['p:1','p:2','p:3','p:4','p:5','p:6','p:7'];
+  eq(J(E.normalizeRoles('p:1','p:2', team)), J({leader:'p:1',friend:'p:2'}), '两人都在队伍里 → 原样保留');
+  eq(J(E.normalizeRoles('p:1','p:2', ['p:1','p:2',null,null,null,null,null])),
+     J({leader:'p:1',friend:'p:2'}), '队伍不满员时同样成立');
+  eq(E.normalizeRoles('p:X','p:2', team).leader, null, '队长不在队伍里 → 置空');
+  eq(E.normalizeRoles('p:1','p:9', team).friend, null, '好友不在队伍里 → 置空');
+  eq(E.normalizeRoles('p:1','p:1', team).friend, null, '一人兼任时清掉好友');
+  eq(E.normalizeRoles('p:1','p:1', team).leader, 'p:1', '一人兼任时队长仍保留');
+  eq(J(E.normalizeRoles(null, undefined, team)), J({leader:null,friend:null}), '不传标记 → 双空');
+  eq(E.normalizeRoles('abc','p2', ['abc','p2',null,null,null,null,null]).leader, 'p:abc',
+     '裸 id 写法两侧一起归一化，能对上成员');
+  eq(E.normalizeRoles('p:1','p:2', [null,null,null,null,null,null,null]).leader, null,
+     '空队伍 → 标记一律置空');
+  eq(E.normRoleKey('r:123'), 'r:123', 'normRoleKey：r: 前缀原样保留');
+  eq(E.normRoleKey(''), null, 'normRoleKey：空串 → null');
+}
+
+/* ---- 用例28：队伍完整指纹（teamFullSignature）---- */
+{
+  const members = ['p:1','p:2','p:3','p:4','p:5','p:6','p:7'];
+  const A = { members: members, leader:'p:1', friend:'p:2' };
+  const C = { members: members, leader:'p:3', friend:'p:2' };
+  const D = { members: members };
+  eq(E.teamFullSignature(A) === E.teamFullSignature({ members: members.slice(), leader:'p:1', friend:'p:2' }),
+     true, '同一套（成员 + 标记）指纹一致');
+  eq(E.teamFullSignature(A) === E.teamFullSignature(C), false, '同 7 人但队长不同 → 算两套编队');
+  eq(E.teamFullSignature(A) === E.teamFullSignature(D), false, '不设标记与设了标记不是同一套');
+  eq(E.teamFullSignature(D) === E.teamFullSignature({ members: members, leader:null, friend:null }),
+     true, '都不设标记时指纹一致（「当前是否已保存」的判断依据）');
+  eq(E.teamFullSignature(undefined) === E.teamFullSignature(null), true, '空输入安全退化且稳定');
+  eq(E.teamFullSignature(A).indexOf(E.teamSignature(A.members)) === 0, true, '完整指纹以成员指纹为前缀');
+}
+
+/* ---- 用例29：导入时标记的引用重写（remapRoleKey）---- */
+{
+  const map = { oldA:'newA' };
+  eq(E.remapRoleKey('p:oldA', map), 'p:newA', '自建卡标记被换成新 id');
+  eq(E.remapRoleKey('r:1000460', map), 'r:1000460', '图鉴卡标记保持不变（图鉴 id 稳定）');
+  eq(E.remapRoleKey(null, map), null, '空标记安全返回 null');
+  eq(E.remapRoleKey('p:oldA', null), 'p:oldA', '缺映射表时原样返回');
+  eq(E.remapRoleKey('p:unknown', map), 'p:unknown', '映射表里没有的引用原样保留');
+}
+
+/* ---- 用例30：标记随队伍变动自动摘除（syncRoles）---- */
+{
+  const J = (a) => JSON.stringify(a);
+  E.state.team = ['p:1','p:2','p:3','p:4','p:5','p:6','p:7'];
+  E.state.leader = 'p:1'; E.state.friend = 'p:2';
+  eq(E.syncRoles().leader, 'p:1', '满编时队长标记保留');
+  E.state.team[0] = null;                                     // 队长被移出队伍
+  eq(E.syncRoles().leader, null, '角色被移出队伍 → 标记自动摘掉');
+  eq(E.syncRoles().friend, 'p:2', '另一个标记不受影响');
+  E.state.team = new Array(7).fill(null);
+  eq(J(E.syncRoles()), J({leader:null,friend:null}), '队伍清空 → 两个标记都摘掉');
+  E.state.team = ['p:1','p:2','p:3','p:4','p:5','p:6','p:7'];
+  E.state.leader = 'p:1'; E.state.friend = 'p:1';
+  eq(E.syncRoles().friend, null, '载入脏数据（一人兼任）时好友被清掉');
+  E.state.leader = null; E.state.friend = null;
+  eq(J(E.currentTeamObj().members), J(['p:1','p:2','p:3','p:4','p:5','p:6','p:7']), 'currentTeamObj 取到当前队伍');
 }
 
 console.log('\n结果: ' + pass + ' 通过 / ' + fail + ' 失败');

@@ -157,7 +157,8 @@ const teamFns = ['teamFromMembers', 'teamSignature', 'normalizeTeams', 'remapTea
                  'confirmTeamModal', 'importTeamArray', 'importBundle', 'importResultText'];
 const missTeam = teamFns.filter(f => !new RegExp('function\\s+' + f + '\\s*\\(').test(inlineSrc));
 ok(missTeam.length === 0, `编队相关函数已定义 (${teamFns.length} 个${missTeam.length ? '，缺失: ' + missTeam.join(',') : ''})`);
-ok(/renderTeam\(\);\s*\n\s*renderTeamPresets\(\);/.test(inlineSrc), 'renderAll 会重绘编队快捷位');
+ok(/renderTeam\(\);\s*\n\s*renderRoles\(\);\s*\n\s*renderTeamPresets\(\);/.test(inlineSrc),
+   'renderAll 会重绘编队快捷位与队长/好友选择器');
 ok(/LS_TEAMS\s*=\s*'dbs_sorter_teams_v1'/.test(inlineSrc), '编队有独立的 localStorage 键');
 ok(/localStorage\.setItem\(LS_TEAMS/.test(inlineSrc), 'save() 会持久化编队');
 ok(/normalizeTeams\(tp\)/.test(inlineSrc), 'load() 会读回并清洗编队');
@@ -167,7 +168,34 @@ ok(/version:\s*2/.test(inlineSrc) && /Array\.isArray\(data\.teams\)/.test(inline
 // 「只存人」的约定：编队里不得出现回合排程相关字段
 const tpPush = (inlineSrc.match(/teams\.push\(\{[^}]*\}\)/) || [''])[0];
 ok(tpPush.length > 0 && !/turns|deck|turnCount/.test(tpPush), '编队只保存成员与初始顺序，不含回合排程');
-ok(/version:\s*'2\.2\.1'/.test(inlineSrc), '应用版本号已升到 2.2.1');
+
+// 13. 队长 / 好友标记
+for (const id of ['roleBar', 'selLeader', 'selFriend']) {
+  ok(new RegExp(`id="${id}"`).test(html), `队长/好友相关 DOM 节点存在：#${id}`);
+}
+const roleFns = ['normRoleKey', 'normalizeRoles', 'syncRoles', 'teamFullSignature',
+                 'currentTeamObj', 'remapRoleKey', 'renderRoles', 'roleTagWith',
+                 'roleTagOf', 'setRole'];
+const missRole = roleFns.filter(f => !new RegExp('function\\s+' + f + '\\s*\\(').test(inlineSrc));
+ok(missRole.length === 0, `队长/好友相关函数已定义 (${roleFns.length} 个${missRole.length ? '，缺失: ' + missRole.join(',') : ''})`);
+// save() 落盘前必须先对齐标记（保证「标记 ⊆ 队伍成员」这条不变量）
+const saveBody = (inlineSrc.match(/function save\(\)\{[\s\S]*?\n\}/) || [''])[0];
+ok(/syncRoles\(\)/.test(saveBody), 'save() 落盘前会同步队长/好友标记');
+ok(/leader:\s*state\.leader,\s*friend:\s*state\.friend/.test(saveBody), '存档里包含 leader / friend');
+// 编队预设必须携带标记
+ok(/leader:\s*r\.leader,\s*friend:\s*r\.friend/.test(inlineSrc), '编队预设保存队长/好友标记');
+ok(/remapRoleKey\(t\.leader,\s*idMap\)/.test(inlineSrc), '导入时重写标记里的自建卡 id');
+// 「当前」高亮改用完整指纹（同 7 人但队长不同 → 不算同一套）
+ok(/teamFullSignature\(currentTeamObj\(\)\)/.test(inlineSrc), '编队「当前」高亮按完整指纹判定');
+// 显示点：队伍格 / 牌序条 / 回合卡 / 汇总 四处都要有标记
+ok(/roleTagOf\(key\)/.test((inlineSrc.match(/function renderTeam\(\)\{[\s\S]*?\n\}/) || [''])[0]), '队伍格显示队长/好友标记');
+ok(/roleTagOf\(state\.deck\[i\]\)/.test(inlineSrc), '当前牌序显示队长/好友标记');
+ok(/roleTagOf\(key\)/.test((inlineSrc.match(/function cardHTML\([\s\S]*?\n\}/) || [''])[0]), '回合卡片显示队长/好友标记');
+ok(/roleTagOf\(id\)/.test((inlineSrc.match(/function renderSummary\(\)\{[\s\S]*?\n\}/) || [''])[0]), '出场回合汇总显示队长/好友标记');
+for (const api of ['getRoles', 'setLeader', 'setFriend']) {
+  ok(new RegExp(api + '\\s*:').test(inlineSrc), `对外接口暴露 ${api}()`);
+}
+ok(/version:\s*'2\.3\.0'/.test(inlineSrc), '应用版本号已升到 2.3.0');
 
 const s = R.cards[0];
 console.log(`\n样卡: ${s[4]} ${s[1]} | ${s[2]} | ${s[5]} ${s[6]} | 链接 ${s[9].map(i => R.links[i]).join('、')}`);

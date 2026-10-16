@@ -347,12 +347,120 @@ ok($$('#deckStrip .chip')[0].draggable === true, '牌序条槽位可拖拽');
   ok(DS.importBundle('oops') === null, '结构非法时 importBundle 返回 null');
   DS.removeTeam(DS.getTeams()[0].id);
 
-  // 还原成测试开头那套队伍，后面的全局不变量检查需要一个满编状态
-  DS.setTeamByIds(team0);
+  // 还原成测试开头那套队伍（用图鉴 id 重建，避免把 r: 前缀叠成 r:r:…）
+  DS.setTeamByRosterIds(ids);
   ok(DS.getState().team.filter(Boolean).length === 7, '测试收尾：队伍已还原为满编 7 人');
 }
 
-/* ---------- 6. 全局不变量 ---------- */
+/* ---------- 6. 队长 / 好友标记 ---------- */
+{
+  const stateRaw = () => win.localStorage.getItem('dbs_sorter_state_v1') || '';
+  const setSel = (sel, val) => { sel.value = val; sel.dispatchEvent(ev('change')); };
+  const chipOf = (id) => $$('#teamPresets .tp[data-id]').find(c => c.dataset.id === id);
+
+  DS.setTeamByRosterIds(ids);                       // 用图鉴卡铺一套干净的满编队伍
+  const team = DS.getState().team.slice();
+  const keys = team.filter(Boolean);
+  ok(keys.length === 7 && keys.every(k => /^r:/.test(k)), '队伍已用图鉴卡铺满（7 人）');
+
+  ok(!!$('#roleBar') && !!$('#selLeader') && !!$('#selFriend'), '队伍区有队长 / 好友选择器');
+  ok($('#selLeader').disabled === false, '队伍有成员时选择器可用');
+  const opts = $$('#selLeader option').map(o => o.value);
+  ok(opts[0] === '' && opts.length === keys.length + 1,
+     `选择器列出「未设置」+ 7 名队员（共 ${opts.length} 项）`);
+  ok($$('#teamGrid .team-slot .role-tag').length === 0, '未指定时队伍格上没有标记');
+  ok(!/已移除/.test($('#teamGrid').textContent), '队伍格里的角色名都能正常解析');
+
+  /* --- 指定队长 --- */
+  const leadKey = keys[0], frKey = keys[1];
+  setSel($('#selLeader'), leadKey);
+  ok(DS.getRoles().leader === leadKey, '队长已记录到 state');
+  ok($$('#teamGrid .team-slot .role-tag.lead').length === 1, '队伍格里队长那一格显示「队长」徽标');
+  ok($$('#teamGrid .team-slot')[team.indexOf(leadKey)].querySelector('.role-tag.lead') !== null,
+     '队长徽标挂在正确的槽位上');
+  ok($$('#summary .sum-row .role-tag.lead').length === 1, '出场回合汇总里队长带标记');
+  const turnsWithLead = DS.getState().turns.filter(r => r.includes(leadKey)).length;
+  ok($$('#turns .card .role-tag.lead').length === turnsWithLead,
+     `回合卡片上队长徽标数 = 队长出场回合数（${turnsWithLead}）`);
+  ok(stateRaw().indexOf('"leader"') >= 0, '队长标记已写入 localStorage');
+
+  /* --- 指定好友 --- */
+  setSel($('#selFriend'), frKey);
+  ok(DS.getRoles().friend === frKey, '好友已记录到 state');
+  ok($$('#teamGrid .team-slot .role-tag.fr').length === 1, '队伍格里好友那一格显示「好友」徽标');
+  ok($$('#deckStrip .chip .role-tag').length === 2, '当前牌序条上两个标记都显示');
+
+  /* --- 一人不能身兼两职 --- */
+  setSel($('#selFriend'), leadKey);
+  ok(/不能是同一个/.test($('#toast').textContent), `撞人时给出提示：${$('#toast').textContent}`);
+  ok(DS.getRoles().friend === frKey, '撞人时好友保持原值不变');
+
+  /* --- 标记跟人走，不跟槽位走 --- */
+  const beforeRoles = DS.getRoles();
+  dragDrop($$('#teamGrid .team-slot')[0], $$('#teamGrid .team-slot')[5]);
+  ok(DS.getRoles().leader === beforeRoles.leader && DS.getRoles().friend === beforeRoles.friend,
+     '拖动交换初始槽位后，标记仍绑在角色上（没被换走）');
+  const newPos = DS.getState().team.indexOf(leadKey);
+  ok(newPos === 5 && $$('#teamGrid .team-slot')[5].querySelector('.role-tag.lead') !== null,
+     '队长换到新槽位后，徽标跟着到了新格子');
+
+  /* --- 存编队：标记一并保存 --- */
+  $('#btnTeamSave').click();
+  $('#teamName').value = '带标记队';
+  ok($$('#teamPreview .role-tag').length === 2, '保存弹窗的预览里显示队长 / 好友标记');
+  $('#teamConfirm').click();
+  const tagged = DS.getTeams().find(x => x.name === '带标记队');
+  ok(tagged && tagged.leader === DS.getRoles().leader && tagged.friend === DS.getRoles().friend,
+     '编队预设里保存了队长 / 好友');
+  const lsTeams = win.localStorage.getItem('dbs_sorter_teams_v1') || '';
+  ok(/"leader"/.test(lsTeams) && /"friend"/.test(lsTeams), 'localStorage 的编队里带 leader / friend 字段');
+  ok(!/"turns"|"deck"|turnCount/.test(lsTeams), '编队里依然不含回合排程');
+
+  /* --- 清掉标记 → 同 7 人也能另存一套 --- */
+  setSel($('#selLeader'), '');
+  setSel($('#selFriend'), '');
+  ok(DS.getRoles().leader === null && DS.getRoles().friend === null, '两个标记都可以取消');
+  ok($$('#teamGrid .team-slot .role-tag').length === 0, '取消后队伍格上的徽标消失');
+  const n1 = DS.getTeams().length;
+  $('#btnTeamSave').click();
+  $('#teamName').value = '无标记队';
+  $('#teamConfirm').click();
+  ok(DS.getTeams().length === n1 + 1, '同 7 人但去掉标记 → 算另一套编队，允许保存');
+  const plain = DS.getTeams().find(x => x.name === '无标记队');
+  ok(plain && plain.leader === null && plain.friend === null, '新编队里没有标记');
+  ok($$('#teamPresets .tp.cur').length === 1 && $$('#teamPresets .tp.cur')[0].dataset.id === plain.id,
+     '「当前」高亮跟着标记走（指向无标记那一套）');
+
+  /* --- 载入编队：标记一并恢复 --- */
+  $('#btnClearTeam').click();
+  chipOf(tagged.id).click();
+  ok(DS.getRoles().leader === tagged.leader && DS.getRoles().friend === tagged.friend,
+     '载入编队后队长 / 好友一并恢复');
+  ok($$('#teamGrid .team-slot .role-tag').length === 2, '载入后队伍格上的两个徽标都回来了');
+  ok($$('#teamPresets .tp.cur')[0].dataset.id === tagged.id, '载入后「当前」指向带标记那套');
+
+  /* --- 把队长本人移出队伍 → 标记自动摘掉 --- */
+  const li = DS.getState().team.indexOf(tagged.leader);
+  $$('#teamGrid .team-slot')[li].querySelector('[data-act="rm"]').click();
+  ok(DS.getRoles().leader === null, '队长本人被移出队伍 → 标记自动摘掉');
+  ok($$('#teamGrid .team-slot .role-tag.lead').length === 0, '队伍格上队长徽标随之消失');
+  ok(DS.getRoles().friend === tagged.friend, '好友标记不受影响');
+
+  /* --- 对外接口 --- */
+  const some = DS.getState().team.filter(Boolean)[0];
+  ok(DS.setLeader(some) === true, 'DokkanSorter.setLeader() 可设队长');
+  ok(DS.getRoles().leader === some, 'setLeader() 生效');
+  ok(DS.setLeader('p:__不存在__') === false, 'setLeader() 拒绝不在队伍里的角色');
+  ok(DS.getRoles().leader === some, '被拒绝后队长保持不变');
+
+  /* --- 收尾：清掉测试编队，还原满编队伍 --- */
+  DS.getTeams().slice().forEach(t => DS.removeTeam(t.id));
+  DS.setTeamByRosterIds(ids);
+  ok(DS.getTeams().length === 0 && DS.getState().team.filter(Boolean).length === 7,
+     '测试收尾：编队已清空、队伍还原为满编 7 人');
+}
+
+/* ---------- 7. 全局不变量 ---------- */
 {
   const st = DS.getState();
   const rowsOk = st.turns.every(r => r.length === 3 && new Set(r.filter(Boolean)).size === r.filter(Boolean).length);
