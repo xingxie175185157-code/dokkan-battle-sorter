@@ -24,7 +24,7 @@ var TYPE_ORDER = ['str','agl','teq','int','phy','none'];
 var LS_PRESETS='a', LS_STATE='b', LS_SEEDED='c', LS_TEAMS='d', DEFAULT_TURNS=5;
 var presets = [];
 var teams = [];
-var state = { team:new Array(7).fill(null), deck:new Array(7).fill(null), turns:[], turnCount:5, leader:null, friend:null };
+var state = { team:new Array(7).fill(null), deck:new Array(7).fill(null), turns:[], turnCount:5, leaderSlot:null, friendSlot:null };
 function $(s){ return { classList:{add:function(){},remove:function(){}}, textContent:'', value:'', innerHTML:'' }; }
 function $$(s){ return []; }
 function esc(s){ return String(s==null?'':s); }
@@ -47,7 +47,9 @@ module.exports = {
   normalizeTeamKeys: normalizeTeamKeys,
   fixArr: fixArr,
   normRoleKey: normRoleKey, normalizeRoles: normalizeRoles, syncRoles: syncRoles,
-  teamFullSignature: teamFullSignature, currentTeamObj: currentTeamObj, remapRoleKey: remapRoleKey,
+  roleSlotOf: roleSlotOf, roleValueOf: roleValueOf, teamRoles: teamRoles,
+  roleKeyAt: roleKeyAt, swapRoleSlot: swapRoleSlot,
+  teamFullSignature: teamFullSignature, currentTeamObj: currentTeamObj,
   teamSlotsOf: teamSlotsOf, copyCountOf: copyCountOf, planFromSlot: planFromSlot,
   seed: seedPresets,
   setPresets: function(a){ presets.length = 0; a.forEach(function(x){ presets.push(x); }); },
@@ -347,9 +349,11 @@ reset(12);
   eq(long[0].name.length, 40, '名称超长被截断到 40 字');
   eq(E.normalizeTeams('oops').length, 0, '非数组输入返回空集合');
   const wr = E.normalizeTeams([{ name:'带标记', members:['p:1','p:2'], leader:'p:1', friend:'p:2' }]);
-  eq(wr[0].leader + '/' + wr[0].friend, 'p:1/p:2', '编队清洗后保留队长/好友标记');
+  eq(J([wr[0].leaderSlot, wr[0].friendSlot]), J([0,1]), '编队清洗时旧的角色标记迁成槽位号');
+  const wr2 = E.normalizeTeams([{ name:'新标记', members:['p:1','p:2'], leaderSlot:1, friendSlot:1 }]);
+  eq(J([wr2[0].leaderSlot, wr2[0].friendSlot]), J([1,null]), '同一张卡兼任 → 清洗时助战置空');
   const br = E.normalizeTeams([{ name:'坏标记', members:['p:1'], leader:'p:9', friend:'p:9' }]);
-  eq(J([br[0].leader, br[0].friend]), J([null,null]), '标记不在成员里 → 清洗时一律置空');
+  eq(J([br[0].leaderSlot, br[0].friendSlot]), J([null,null]), '标记不在成员里 → 清洗时一律置空');
 }
 
 /* ---- 用例25：导入时编队引用的 id 重写（remapTeamMembers）---- */
@@ -375,68 +379,87 @@ reset(12);
   eq(J(E.normalizeTeamKeys(false)), J([null,null,null,null,null,null,null]), '非数组输入安全退化');
 }
 
-/* ---- 用例27：队长 / 助战规整（normalizeRoles）---- */
+/* ---- 用例27：队长 / 助战标记规整成「槽位号」 ----
+   标记的是「哪一张卡」，不是「哪个角色」：同名两张时靠槽位区分 */
 {
   const J = (a) => JSON.stringify(a);
   const team = ['p:1','p:2','p:3','p:4','p:5','p:6','p:7'];
-  eq(J(E.normalizeRoles('p:1','p:2', team)), J({leader:'p:1',friend:'p:2'}), '两人都在队伍里 → 原样保留');
-  eq(J(E.normalizeRoles('p:1','p:2', ['p:1','p:2',null,null,null,null,null])),
-     J({leader:'p:1',friend:'p:2'}), '队伍不满员时同样成立');
-  eq(E.normalizeRoles('p:X','p:2', team).leader, null, '队长不在队伍里 → 置空');
-  eq(E.normalizeRoles('p:1','p:9', team).friend, null, '助战不在队伍里 → 置空');
-  eq(E.normalizeRoles('p:1','p:1', team).friend, 'p:1', '队长与助战可以是同一名角色（助战保留）');
-  eq(E.normalizeRoles('p:1','p:1', team).leader, 'p:1', '队长与助战同一人时队长也保留');
-  eq(J(E.normalizeRoles(null, undefined, team)), J({leader:null,friend:null}), '不传标记 → 双空');
-  eq(E.normalizeRoles('abc','p2', ['abc','p2',null,null,null,null,null]).leader, 'p:abc',
-     '裸 id 写法两侧一起归一化，能对上成员');
-  eq(E.normalizeRoles('p:1','p:2', [null,null,null,null,null,null,null]).leader, null,
-     '空队伍 → 标记一律置空');
+  eq(J(E.normalizeRoles(0, 1, team)), J({leaderSlot:0,friendSlot:1}), '传槽位号 → 原样保留');
+  eq(J(E.normalizeRoles('p:3','p:7', team)), J({leaderSlot:2,friendSlot:6}),
+     '传角色 key（旧存档 / 对外接口）→ 换成槽位号');
+  eq(E.normalizeRoles(9, 1, team).leaderSlot, null, '槽位越界 → 置空');
+  eq(E.normalizeRoles(2, 2, team).friendSlot, null, '同一张卡不能兼任 → 助战置空');
+  eq(E.normalizeRoles(2, 2, team).leaderSlot, 2, '兼任时队长保留');
+  eq(E.normalizeRoles(5, null, ['p:1','p:2',null,null,null,null,null]).leaderSlot, null,
+     '空槽位 → 置空');
+  eq(J(E.normalizeRoles(null, undefined, team)), J({leaderSlot:null,friendSlot:null}), '不传标记 → 双空');
+  eq(E.normalizeRoles('p:9', 1, team).leaderSlot, null, '角色不在队伍里 → 置空');
+  eq(E.normalizeRoles('abc', 'p:2', ['abc','p:2',null,null,null,null,null]).leaderSlot, 0,
+     '裸 id 写法归一化后能对上成员');
+  eq(J(E.normalizeRoles(0, 1, [null,null,null,null,null,null,null])),
+     J({leaderSlot:null,friendSlot:null}), '空队伍 → 标记一律置空');
   eq(E.normRoleKey('r:123'), 'r:123', 'normRoleKey：r: 前缀原样保留');
   eq(E.normRoleKey(''), null, 'normRoleKey：空串 → null');
+  eq(E.roleSlotOf(true, team), null, '非数字非字符串的输入 → null');
 }
 
 /* ---- 用例28：队伍完整指纹（teamFullSignature）---- */
 {
   const members = ['p:1','p:2','p:3','p:4','p:5','p:6','p:7'];
-  const A = { members: members, leader:'p:1', friend:'p:2' };
-  const C = { members: members, leader:'p:3', friend:'p:2' };
+  const A = { members: members, leaderSlot:0, friendSlot:1 };
+  const C = { members: members, leaderSlot:2, friendSlot:1 };
   const D = { members: members };
-  eq(E.teamFullSignature(A) === E.teamFullSignature({ members: members.slice(), leader:'p:1', friend:'p:2' }),
+  eq(E.teamFullSignature(A) === E.teamFullSignature({ members: members.slice(), leaderSlot:0, friendSlot:1 }),
      true, '同一套（成员 + 标记）指纹一致');
   eq(E.teamFullSignature(A) === E.teamFullSignature(C), false, '同 7 人但队长不同 → 算两套编队');
   eq(E.teamFullSignature(A) === E.teamFullSignature(D), false, '不设标记与设了标记不是同一套');
-  eq(E.teamFullSignature(D) === E.teamFullSignature({ members: members, leader:null, friend:null }),
+  eq(E.teamFullSignature(D) === E.teamFullSignature({ members: members, leaderSlot:null, friendSlot:null }),
      true, '都不设标记时指纹一致（「当前是否已保存」的判断依据）');
+  eq(E.teamFullSignature({ members: members, leader:'p:1', friend:'p:2' }) === E.teamFullSignature(A),
+     true, '旧数据（角色 key）迁移后与新写法算出同一指纹');
   eq(E.teamFullSignature(undefined) === E.teamFullSignature(null), true, '空输入安全退化且稳定');
   eq(E.teamFullSignature(A).indexOf(E.teamSignature(A.members)) === 0, true, '完整指纹以成员指纹为前缀');
 }
 
-/* ---- 用例29：导入时标记的引用重写（remapRoleKey）---- */
+/* ---- 用例29：新旧标记字段的兼容（roleValueOf / teamRoles）---- */
 {
-  const map = { oldA:'newA' };
-  eq(E.remapRoleKey('p:oldA', map), 'p:newA', '自建卡标记被换成新 id');
-  eq(E.remapRoleKey('r:1000460', map), 'r:1000460', '图鉴卡标记保持不变（图鉴 id 稳定）');
-  eq(E.remapRoleKey(null, map), null, '空标记安全返回 null');
-  eq(E.remapRoleKey('p:oldA', null), 'p:oldA', '缺映射表时原样返回');
-  eq(E.remapRoleKey('p:unknown', map), 'p:unknown', '映射表里没有的引用原样保留');
+  const members = ['p:1','p:1','p:3',null,null,null,null];   // 同名两张
+  eq(E.roleValueOf({ leader:'p:1' }, 'leader'), 'p:1', 'roleValueOf 能读旧字段');
+  eq(E.roleValueOf({ leaderSlot:5 }, 'leader'), 5, 'roleValueOf 读新字段');
+  eq(E.roleValueOf({ leaderSlot:0, leader:'p:9' }, 'leader'), 0, '新旧字段并存时以槽位号为准');
+  eq(E.roleValueOf({ leaderSlot:null, leader:'p:1' }, 'leader'), 'p:1', '新字段为 null 时回退到旧字段');
+  eq(E.roleValueOf(null, 'leader'), null, '空对象安全返回 null');
+
+  const t = E.teamRoles({ members: members, leader:'p:1', friend:'p:1' });
+  eq(t.leaderSlot, 0, '同名的旧标记迁到第一个槽位');
+  eq(t.friendSlot, 1, '旧数据两者是同一角色的两张 → 助战挪到另一个槽位（不丢标记）');
+  const s = E.teamRoles({ members: members, leaderSlot:0, friendSlot:1 });
+  eq(s.leaderSlot === 0 && s.friendSlot === 1, true, '同名的两张可以分别当队长和助战');
+  eq(E.teamRoles({ members: members, leaderSlot:6, friendSlot:1 }).leaderSlot, null,
+     '标记落在空槽位上 → 置空');
+  eq(E.teamRoles({ members: members, leaderSlot:0, friendSlot:0 }).friendSlot, null,
+     '新写法里同一张卡兼任 → 助战置空');
+  eq(E.teamRoles({ members: ['p:1','p:2'], leader:'p:1', friend:'p:1' }).friendSlot, null,
+     '角色只有一张时兼任旧数据也清掉');
 }
 
 /* ---- 用例30：标记随队伍变动自动摘除（syncRoles）---- */
 {
   const J = (a) => JSON.stringify(a);
   E.state.team = ['p:1','p:2','p:3','p:4','p:5','p:6','p:7'];
-  E.state.leader = 'p:1'; E.state.friend = 'p:2';
-  eq(E.syncRoles().leader, 'p:1', '满编时队长标记保留');
-  E.state.team[0] = null;                                     // 队长被移出队伍
-  eq(E.syncRoles().leader, null, '角色被移出队伍 → 标记自动摘掉');
-  eq(E.syncRoles().friend, 'p:2', '另一个标记不受影响');
+  E.state.leaderSlot = 0; E.state.friendSlot = 1;
+  eq(E.syncRoles().leaderSlot, 0, '满编时队长标记保留');
+  E.state.team[0] = null;                                     // 队长那张卡被移出队伍
+  eq(E.syncRoles().leaderSlot, null, '卡片被移出队伍 → 标记自动摘掉');
+  eq(E.syncRoles().friendSlot, 1, '另一个标记不受影响');
   E.state.team = new Array(7).fill(null);
-  eq(J(E.syncRoles()), J({leader:null,friend:null}), '队伍清空 → 两个标记都摘掉');
+  eq(J(E.syncRoles()), J({leaderSlot:null,friendSlot:null}), '队伍清空 → 两个标记都摘掉');
   E.state.team = ['p:1','p:2','p:3','p:4','p:5','p:6','p:7'];
-  E.state.leader = 'p:1'; E.state.friend = 'p:1';
-  eq(E.syncRoles().friend, 'p:1', '队长与助战同一人时两个标记都保留');
-  E.state.leader = null; E.state.friend = null;
+  E.state.leaderSlot = 0; E.state.friendSlot = 0;
+  eq(E.syncRoles().friendSlot, null, '载入脏数据（同一张卡兼任）时助战被清掉');
+  E.state.leaderSlot = null; E.state.friendSlot = null;
   eq(J(E.currentTeamObj().members), J(['p:1','p:2','p:3','p:4','p:5','p:6','p:7']), 'currentTeamObj 取到当前队伍');
+  eq(E.currentTeamObj().leaderSlot, null, 'currentTeamObj 也带上标记槽位');
 }
 
 /* ---- 用例31：同名双角色（自己 1 + 助战 1）的槽位统计 ----
@@ -449,7 +472,10 @@ reset(12);
   eq(E.copyCountOf('p:2'), 1, '其他角色仍是 1 份');
   eq(E.copyCountOf('p:9'), 0, '不在队伍里的角色为 0 份');
   eq(E.copyCountOf(null), 0, '空 key 安全返回 0');
-  eq(E.normalizeRoles('p:1','p:1', E.state.team).friend, 'p:1', '同名角色可同时当队长与助战');
+  eq(E.normalizeRoles(0, 5, E.state.team).friendSlot, 5,
+     '同名的两张可以分别当队长（槽 1）与助战（槽 6）');
+  eq(E.normalizeRoles(0, 0, E.state.team).friendSlot, null,
+     '同一张卡不能同时当队长与助战');
   const sig1 = E.teamSignature(E.state.team);
   eq(sig1.split('|').length, 7, '队形指纹按槽位算，仍是 7 段');
   eq(E.teamSignature(['p:1','p:2','p:3','p:4','p:5','p:1','p:7']) === sig1, true,
@@ -489,6 +515,20 @@ reset(12);
   eq(deck.filter(Boolean).length, 7, '牌序无空位、没丢人');
   eq(sortJoin(deck), sortJoin(init), '牌序的成员组成不变（不多不少）');
   eq(E.state.turns[1].join(','), 'p:1,p:5,p:4', '第 2 回合按手动顺序上场');
+}
+
+/* ---- 用例34：拖动 / 打乱时标记跟着卡片搬（swapRoleSlot / roleKeyAt）---- */
+{
+  eq(E.swapRoleSlot(0, 0, 5), 5, '队长所在槽位被交换 → 标记跟到新槽位');
+  eq(E.swapRoleSlot(5, 0, 5), 0, '反向同理');
+  eq(E.swapRoleSlot(2, 0, 5), 2, '不相干的槽位不受影响');
+  eq(E.swapRoleSlot(null, 0, 5), null, '未设置标记 → 仍是 null');
+  eq(E.swapRoleSlot(3, 3, 3), 3, '原地交换不出错');
+  eq(E.roleKeyAt(0, ['p:1','p:2']), 'p:1', 'roleKeyAt 取到该槽位的角色');
+  eq(E.roleKeyAt(1, ['p:1','p:2']), 'p:2', '第二个槽位同理');
+  eq(E.roleKeyAt(6, ['p:1','p:2']), null, '越界槽位返回 null');
+  eq(E.roleKeyAt(1, ['p:1',null]), null, '空槽位返回 null');
+  eq(E.roleKeyAt(null, ['p:1']), null, 'null 槽位安全返回');
 }
 
 console.log('\n结果: ' + pass + ' 通过 / ' + fail + ' 失败');

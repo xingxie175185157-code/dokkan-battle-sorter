@@ -174,25 +174,42 @@ for (const id of ['roleBar', 'selLeader', 'selFriend']) {
   ok(new RegExp(`id="${id}"`).test(html), `队长/助战相关 DOM 节点存在：#${id}`);
 }
 const roleFns = ['normRoleKey', 'normalizeRoles', 'syncRoles', 'teamFullSignature',
-                 'currentTeamObj', 'remapRoleKey', 'renderRoles', 'roleTagWith',
-                 'roleTagOf', 'setRole'];
+                 'currentTeamObj', 'roleSlotOf', 'roleValueOf', 'teamRoles', 'roleKeyAt',
+                 'swapRoleSlot', 'renderRoles', 'roleTagWith', 'roleTagHTML',
+                 'roleTagOf', 'roleTagForKey', 'rolePosAmong', 'setRole'];
 const missRole = roleFns.filter(f => !new RegExp('function\\s+' + f + '\\s*\\(').test(inlineSrc));
 ok(missRole.length === 0, `队长/助战相关函数已定义 (${roleFns.length} 个${missRole.length ? '，缺失: ' + missRole.join(',') : ''})`);
-// save() 落盘前必须先对齐标记（保证「标记 ⊆ 队伍成员」这条不变量）
+// save() 落盘前必须先对齐标记（保证「标记 ⊆ 队伍槽位」这条不变量）
 const saveBody = (inlineSrc.match(/function save\(\)\{[\s\S]*?\n\}/) || [''])[0];
 ok(/syncRoles\(\)/.test(saveBody), 'save() 落盘前会同步队长/助战标记');
-ok(/leader:\s*state\.leader,\s*friend:\s*state\.friend/.test(saveBody), '存档里包含 leader / friend');
+ok(/leaderSlot:\s*state\.leaderSlot,\s*friendSlot:\s*state\.friendSlot/.test(saveBody),
+   '存档里包含 leaderSlot / friendSlot');
 // 编队预设必须携带标记
-ok(/leader:\s*r\.leader,\s*friend:\s*r\.friend/.test(inlineSrc), '编队预设保存队长/助战标记');
-ok(/remapRoleKey\(t\.leader,\s*idMap\)/.test(inlineSrc), '导入时重写标记里的自建卡 id');
+ok(/leaderSlot:\s*r\.leaderSlot,\s*friendSlot:\s*r\.friendSlot/.test(inlineSrc),
+   '编队预设保存队长/助战标记');
+// 标记存槽位号而不是角色 key —— 同名两张才分得清
+ok(!/leader:\s*r\.leader/.test(inlineSrc) && !/state\.leader\b/.test(inlineSrc),
+   '标记已全部改为槽位号（不再残留 state.leader 的角色写法）');
 // 「当前」高亮改用完整指纹（同 7 人但队长不同 → 不算同一套）
 ok(/teamFullSignature\(currentTeamObj\(\)\)/.test(inlineSrc), '编队「当前」高亮按完整指纹判定');
 // 显示点：队伍格 / 牌序条 / 回合卡 / 汇总 四处都要有标记
-ok(/roleTagOf\(key\)/.test((inlineSrc.match(/function renderTeam\(\)\{[\s\S]*?\n\}/) || [''])[0]), '队伍格显示队长/助战标记');
-ok(/roleTagOf\(state\.deck\[i\]\)/.test(inlineSrc), '当前牌序显示队长/助战标记');
-ok(/roleTagOf\(key\)/.test((inlineSrc.match(/function cardHTML\([\s\S]*?\n\}/) || [''])[0]), '回合卡片显示队长/助战标记');
-ok(/roleTagOf\(id\)/.test((inlineSrc.match(/function renderSummary\(\)\{[\s\S]*?\n\}/) || [''])[0]), '出场回合汇总显示队长/助战标记');
-for (const api of ['getRoles', 'setLeader', 'setFriend']) {
+ok(/roleTagOf\(i\)/.test((inlineSrc.match(/function renderTeam\(\)\{[\s\S]*?\n\}/) || [''])[0]),
+   '队伍格按槽位显示队长/助战标记');
+ok(/rolePosAmong\(allSlots, state\.deck, state\.leaderSlot\)/.test(
+     (inlineSrc.match(/function renderDeckStrip\([\s\S]*?\n\}/) || [''])[0]),
+   '当前牌序按解析出的位置显示标记（一张卡一枚）');
+ok(/roleTagHTML\(roleCls\)/.test((inlineSrc.match(/function cardHTML\([\s\S]*?\n\}/) || [''])[0]),
+   '回合卡片显示队长/助战标记');
+ok(/rolePosAmong\(sl, row \|\| \[\], state\.leaderSlot\)/.test(
+     (inlineSrc.match(/function renderTurns\(\)\{[\s\S]*?\n\}/) || [''])[0]),
+   '回合卡片每回合只给一张卡打标记');
+ok(/roleTagForKey\(id\)/.test((inlineSrc.match(/function renderSummary\(\)\{[\s\S]*?\n\}/) || [''])[0]),
+   '出场回合汇总显示队长/助战标记');
+// 选择器必须按槽位列（同名两张各占一项，才能只标其中一张）
+const selBody = (inlineSrc.match(/function renderRoles\(\)\{[\s\S]*?\n\}/) || [''])[0];
+ok(/items\.push\(\{ key:k, slot:i \}\)/.test(selBody) && /value="' \+ it\.slot \+ '"/.test(selBody),
+   '选择器按槽位列出（同名两张各占一项）');
+for (const api of ['getRoles', 'setLeader', 'setFriend', 'setLeaderSlot', 'setFriendSlot']) {
   ok(new RegExp(api + '\\s*:').test(inlineSrc), `对外接口暴露 ${api}()`);
 }
 
@@ -207,17 +224,18 @@ ok(missDup.length === 0, `同名双角色相关函数已定义${missDup.length ?
 const planBody = (inlineSrc.match(/function planPlacement\([\s\S]*?\n\}/) || [''])[0];
 ok(/teamSlotsOf\(key\)/.test(planBody), 'planPlacement 按队伍里的每一份副本逐个试算');
 ok(/planFromSlot\(/.test(planBody), 'planPlacement 复用单副本试算 planFromSlot()');
-// 队长与助战不再互斥
+// 队长与助战：同一张卡互斥；同一角色的两张卡允许（自己 1 + 助战 1）
 const roleBody  = (inlineSrc.match(/function normalizeRoles\([\s\S]*?\n\}/) || [''])[0];
 const setRoleBody = (inlineSrc.match(/function setRole\([\s\S]*?\n\}/) || [''])[0];
-ok(!/l === f/.test(roleBody) && !/=== other/.test(setRoleBody) && setRoleBody.length > 0,
-   '队长与助战允许是同一名角色（不再互相清空 / 拒绝）');
+ok(/l === f/.test(roleBody) && /slot === state\[otherName\]/.test(setRoleBody),
+   '同一张卡不能兼任队长与助战（同名的另一张可以）');
+ok(/roleSlotOf\(v, state\.team\)/.test(setRoleBody), 'setRole 接受槽位号 / 角色 key 两种写法');
 // UI 文案
 ok(/🤝 助战/.test(html), '队伍区文案为「🤝 助战」');
 ok(!/🤝 好友/.test(html), '旧的「🤝 好友」文案已全部替换');
 ok(/function roleTagWith/.test(inlineSrc) && /title="助战"/.test(inlineSrc), '助战徽标使用「助战」字样');
-ok(/class="role-tags"/.test(inlineSrc), '同一角色兼任两职时多徽标并排显示');
-ok(/version:\s*'2\.4\.0'/.test(inlineSrc), '应用版本号已升到 2.4.0');
+ok(/按槽位指定/.test(html), '队伍区的提示说明「按槽位指定」');
+ok(/version:\s*'2\.5\.0'/.test(inlineSrc), '应用版本号已升到 2.5.0');
 
 const s = R.cards[0];
 console.log(`\n样卡: ${s[4]} ${s[1]} | ${s[2]} | ${s[5]} ${s[6]} | 链接 ${s[9].map(i => R.links[i]).join('、')}`);

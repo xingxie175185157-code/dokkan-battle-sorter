@@ -5,6 +5,36 @@
 
 ## [未发布]
 
+## [2.5.0] - 2026-10-17
+
+### 修复
+
+- **同名两张卡时，队长 / 助战会一起被标上**：标记原来存的是**角色 key**，
+  所以队里有两张同名卡时，选其中一张当队长，两张都会被标成队长。
+  现在标记改存**槽位号**（`state.leaderSlot` / `state.friendSlot`，0~6），
+  落到**具体哪一张卡**上，另一张同名卡不会再被一起标。
+
+### 变更
+
+- 队长 / 助战选择器改为**按槽位列出**（如「槽 3 · 孙悟空」）：
+  同名两张各占一项，想标哪一张就选哪一张
+- 取消「同一名角色可以兼任队长与助战」：**同一张卡不能兼任**，
+  但**同名的另一张可以**（自己带一张 + 借好友一张）
+- 标记**跟着卡片走**：拖动换初始顺序、随机打乱时，标记槽位跟着卡片一起搬；
+  这一格被换成别的卡时，标记**摘掉**而不是「继承」到新卡上
+  （整队被接口替换时也会清空标记）
+- 编队对象字段改为 `leaderSlot` / `friendSlot`；旧存档 / 旧导出文件里的
+  `"leader":"r:1000460"` 会在读档时自动迁移成槽位号（`roleValueOf()` / `teamRoles()`）
+- 「出场回合汇总」在标记只看角色（该角色有两张时按角色聚合）
+- 应用版本号升至 `2.5.0`
+
+### 测试
+
+- 引擎回归：144 → **164 项**（标记规整成槽位、旧字段迁移、卡片被替换后标记摘除、打乱时标记跟随等）
+- 端到端静态校验：77 → **82 项**（新增「标记不再用 `state.leader` 写法」「选择器按槽位列」等断言）
+- 真实页面测试（jsdom）：128 → **137 项**（新增同名两张只标一张、一张队长 + 一张助战、
+  同一张卡兼任被拒、拖动/打乱后标记跟随等交互）
+
 ## [2.4.0] - 2026-10-17
 
 ### 新增
@@ -204,7 +234,8 @@
 - 数据存 localStorage，关闭浏览器后仍在
 - 单文件 HTML、零依赖、零构建，双击即用
 
-[未发布]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.4.0...HEAD
+[未发布]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/xingxie175185157-code/dokkan-battle-sorter/compare/v2.2.0...v2.2.1

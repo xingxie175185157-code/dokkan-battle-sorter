@@ -558,11 +558,11 @@ main{
     <!-- 编队快捷位：一键换整套队伍 -->
     <div class="team-presets" id="teamPresets"></div>
 
-    <!-- 队长 / 助战：从当前队伍的 7 人中指定，随编队一起保存 -->
+    <!-- 队长 / 助战：按槽位指定，标记只落在一张卡上，随编队一起保存 -->
     <div class="role-bar" id="roleBar">
       <span class="rb lead"><span>👑 队长</span><select id="selLeader"></select></span>
       <span class="rb fr"><span>🤝 助战</span><select id="selFriend"></select></span>
-      <span class="role-hint">自己 6 人 + 助战 1 人；同名角色可以出现两张，队长与助战也可以是同一人</span>
+      <span class="role-hint">按槽位指定，标记只落在一张卡上；同名两张可分别当队长和助战</span>
     </div>
 
     <div class="panel-body">
@@ -716,11 +716,12 @@ main{
         <code>[{ "name":"孙悟空（超4）", "type":"str", "rarity":"LR", "tags":["超赛"], "note":"…", "image":"https://…" }]</code><br><br>
         type 取值：<code>str</code> 力 / <code>agl</code> 速 / <code>teq</code> 技 / <code>int</code> 知 / <code>phy</code> 体 / <code>none</code> 无。<br>
         也支持完整的预设库备份：<code>{ "presets":[…], "teams":[…] }</code>，
-        其中 <code>teams</code> 为编队（每项形如 <code>{ "name":"超赛队", "members":["r:1000460", …7 项], "leader":"r:1000460", "friend":"r:1000760" }</code>，
-        <code>leader</code> / <code>friend</code> 为可选的队长 / 助战标记（<code>friend</code> 即助战，两者可以是同一角色）），
+        其中 <code>teams</code> 为编队（每项形如 <code>{ "name":"超赛队", "members":["r:1000460", …7 项], "leaderSlot":0, "friendSlot":6 }</code>，
+        <code>leaderSlot</code> / <code>friendSlot</code> 为可选的队长 / 助战标记 —— <b>存的是槽位号（0~6）</b>，
+        所以同名两张时能指明是哪一张；旧文件的 <code>"leader":"r:1000460"</code> 写法也能自动迁移成槽位），
         导入时会自动把编队里指向自建卡的引用改成新 id。<br>
         另已暴露全局接口 <code>window.DokkanSorter</code>：<code>addPresets()</code>、<code>saveTeam()</code>、<code>applyTeam()</code>、
-        <code>getTeams()</code>、<code>getRoles()</code>、<code>setLeader()</code>、<code>setFriend()</code>、
+        <code>getTeams()</code>、<code>getRoles()</code>、<code>setLeaderSlot()</code>、<code>setFriendSlot()</code>、
         <code>importBundle()</code>、<code>getState()</code> 等，可在控制台或外部脚本中直接调用。
       </div>
       <div class="field">
@@ -775,9 +776,12 @@ main{
         编队右侧的小色条是这套队伍 7 个槽位的属性指纹，把鼠标停在上面可以看到完整名单。<br>
         编队<b>只保存「队伍里有哪 7 个人」、他们的初始槽位顺序，以及队长 / 助战标记</b>，不保存回合数与手动拖出来的排程 ——
         载入后会按初始顺序重新推演。当前队伍对应的那套编队会高亮显示。<br>
-        <b>队长 / 助战</b>：队伍区上方的 <b>👑 队长 / 🤝 助战</b> 两个下拉框，可从当前队伍的 7 人里各指定一名
-        （<b>两者可以是同一名角色</b>，这时两枚徽标一起显示）。标记是<b>跟着角色走</b>的 —— 拖动改初始顺序时标记不断，
-        并会同步显示在<b>队伍格、当前牌序、回合卡片、出场回合汇总</b>上；角色被移出队伍时标记自动摘掉。
+        <b>队长 / 助战</b>：队伍区上方的 <b>👑 队长 / 🤝 助战</b> 两个下拉框，<b>按槽位</b>挑选
+        （选项写成「槽 3 · 孙悟空」）。标记落在<b>具体哪一张卡</b>上 ——
+        同名两张时，选哪一张就只有那一张带徽标；同一张卡不能既当队长又当助战，
+        但同名的另一张可以（就是自己带一张 + 借好友一张）。<br>
+        标记会跟着卡片走：拖动改初始顺序、随机打乱时标记不会跑到别人身上；
+        显示在<b>队伍格、当前牌序、回合卡片、出场回合汇总</b>上，角色被移出队伍时自动摘掉。
         存编队时这两个标记会一并保存，载入编队时一起恢复；同 7 个人但队长不同的两套编队算作两套。<br>
         编队与角色预设一起保存在浏览器本地，也一起走「导出 / 导入预设库」，
         导出的 JSON 里同时含 <code>presets</code> 与 <code>teams</code> 两段。<br><br>
@@ -831,8 +835,10 @@ var state = {
   deck : new Array(SLOTS).fill(null),   // 当前牌序（对外推演的唯一依据）
   turns: [],                            // 每回合快照：[[id,id,id], ...]
   turnCount: DEFAULT_TURNS,
-  leader: null,                         // 队长：统一 key，必须 ∈ team
-  friend: null                          // 助战：统一 key，必须 ∈ team（可与 leader 是同一人）
+  /* 队长 / 助战：记的是**槽位号**（0..6），不是角色 key。
+     因为同名角色可以占两个槽位（自己一张 + 助战一张），标记必须落到具体哪一张卡上。 */
+  leaderSlot: null,
+  friendSlot: null
 };
 var dragSrc = null;
 var dragHintCache = null;              // 拖拽悬停时缓存的试算结果
@@ -928,17 +934,50 @@ function imgHTML(c, cls){
          'onerror="this.style.visibility=\'hidden\'">';
 }
 
-/* 队长 / 助战徽标。显式传 leader/friend 是为了让「别的编队」也能算自己的标记
-   （编队快捷位上显示的必须是那套编队自己的队长，而不是当前队伍的）
-   同一名角色可以既是队长又是助战（自己带一张 + 借好友一张同名卡），此时两个徽标都出 */
-function roleTagWith(key, leader, friend){
+/* 队长 / 助战徽标：按**槽位**判定 —— 同名角色占两个槽位时，只有被选中的那一张带徽标。
+   显式传槽位是为了让「别的编队」也能算自己的标记
+   （编队快捷位上显示的必须是那套编队自己的队长，而不是当前队伍的）。 */
+/* 单枚徽标：'lead' / 'fr' → HTML（位置已由调用方解析好时用它） */
+function roleTagHTML(cls){
+  if(cls === 'lead') return '<span class="role-tags"><span class="role-tag lead" title="队长">队长</span></span>';
+  if(cls === 'fr')   return '<span class="role-tags"><span class="role-tag fr" title="助战">助战</span></span>';
+  return '';
+}
+function roleTagWith(slot, leaderSlot, friendSlot){
+  if(slot === null || slot === undefined) return '';
+  if(leaderSlot !== null && leaderSlot !== undefined && leaderSlot === slot) return roleTagHTML('lead');
+  if(friendSlot !== null && friendSlot !== undefined && friendSlot === slot) return roleTagHTML('fr');
+  return '';
+}
+function roleTagOf(slot){ return roleTagWith(slot, state.leaderSlot, state.friendSlot); }
+
+/* 一屏里每个标记只该出现在一张卡上。给定这一屏的槽位序列与每格的角色，
+   返回该标记应落的位置下标（找不到返回 -1）：
+   1) 标记槽位本身就在这一屏、且还是那张卡 → 命中；
+   2) 这个角色在队里有多份时到此为止 —— 否则会把另一张同名卡也标上（正是要避免的）；
+   3) 单份角色被回合内换位挪到了别的槽位 → 退化为按角色认。 */
+function rolePosAmong(slots, row, roleSlot){
+  if(roleSlot === null || roleSlot === undefined) return -1;
+  var key = state.team[roleSlot];
+  if(!key) return -1;
+  var p;
+  for(p=0;p<slots.length;p++){
+    if(slots[p] === roleSlot && row[p] === key) return p;
+  }
+  if(teamSlotsOf(key).length > 1) return -1;
+  for(p=0;p<slots.length;p++){ if(row[p] === key) return p; }
+  return -1;
+}
+/* 只有角色 key、拿不到槽位时用（出场汇总按角色聚合，同名两张合并在同一行） */
+function roleTagForKey(key){
   if(!key) return '';
-  var out = '';
-  if(leader && leader === key) out += '<span class="role-tag lead" title="队长">队长</span>';
-  if(friend && friend === key) out += '<span class="role-tag fr" title="助战">助战</span>';
+  var out = '', ls = state.leaderSlot, fs = state.friendSlot;
+  if(ls !== null && ls !== undefined && state.team[ls] === key)
+    out += '<span class="role-tag lead" title="队长">队长</span>';
+  if(fs !== null && fs !== undefined && state.team[fs] === key)
+    out += '<span class="role-tag fr" title="助战">助战</span>';
   return out ? '<span class="role-tags">' + out + '</span>' : '';
 }
-function roleTagOf(key){ return roleTagWith(key, state.leader, state.friend); }
 
 /* 第 t 回合（0-based）的起始槽位与三槽索引 */
 function startSlot(t){ return (3*t) % SLOTS; }
@@ -973,7 +1012,7 @@ function save(){
     localStorage.setItem(LS_TEAMS, JSON.stringify(teams));
     localStorage.setItem(LS_STATE, JSON.stringify({
       team: state.team, deck: state.deck, turns: state.turns,
-      turnCount: state.turnCount, leader: state.leader, friend: state.friend
+      turnCount: state.turnCount, leaderSlot: state.leaderSlot, friendSlot: state.friendSlot
     }));
   }catch(e){ /* 隐私模式等场景忽略 */ }
 }
@@ -999,38 +1038,89 @@ function normalizeTeamKeys(arr){
   });
 }
 /* ---------- 队长 / 助战标记 ----------
-   标记绑在「角色」上而不是「槽位」上：拖动改初始顺序时标记跟着人走。
-   唯一约束：必须是队伍成员之一。队长与助战**允许是同一名角色**
-   —— 自己的队伍 6 人 + 好友助战 1 人，两者完全可以是同一张卡。 */
+   标记的是「哪一张卡」，不是「哪个角色」：自己的队伍 6 人 + 助战 1 人，
+   同一角色可以占两个槽位，所以队长必须只落在其中一张上。
+   ⇒ 标记存**初始顺序里的槽位号**（0..6），角色由 members[槽位] 反查。
+   这样同名两张时选哪张就只标哪张；拖动换初始顺序时槽位号跟着卡片一起搬。 */
 function normRoleKey(k){
   if(typeof k !== 'string' || !k) return null;
   return (k.indexOf('r:') === 0 || k.indexOf('p:') === 0) ? k : 'p:' + k;
 }
-/* 规整一对标记：不在成员里的一律置空（同一人兼任是允许的） */
+/* 把一个标记值规整成槽位号：既接受槽位号（新写法），也接受角色 key
+   （旧存档 / 对外接口 setLeader(key) 走这条，取该角色第一次出现的槽位） */
+function roleSlotOf(v, members){
+  var keys = normalizeTeamKeys(members);
+  if(typeof v === 'number' && isFinite(v)){
+    var i = Math.floor(v);
+    return (i >= 0 && i < SLOTS && keys[i]) ? i : null;
+  }
+  var k = normRoleKey(v);
+  if(!k) return null;
+  var idx = keys.indexOf(k);
+  return idx >= 0 ? idx : null;
+}
+/* 规整一对标记：不在队伍里的一律置空；同一张卡不能既当队长又当助战
+   （同一角色占两个槽位时，分别选两个槽位即可）。
+   旧数据里两者可能是「同一角色的两张」→ 都写成同一个角色 key，
+   这时把助战挪到该角色的另一个槽位，而不是直接清掉。 */
 function normalizeRoles(leader, friend, members){
   var keys = normalizeTeamKeys(members);
-  var l = normRoleKey(leader), f = normRoleKey(friend);
-  if(keys.indexOf(l) < 0) l = null;
-  if(keys.indexOf(f) < 0) f = null;
-  return { leader: l, friend: f };
+  var l = roleSlotOf(leader, keys);
+  var f = roleSlotOf(friend, keys);
+  if(l !== null && l === f && typeof friend === 'string'){
+    for(var i=0;i<keys.length;i++){
+      if(i !== l && keys[i] === keys[l]){ f = i; break; }
+    }
+  }
+  if(l !== null && l === f) f = null;
+  return { leaderSlot: l, friendSlot: f };
+}
+/* 编队对象上的标记：新数据读 leaderSlot / friendSlot，旧数据回退到 leader / friend 角色 key */
+function roleValueOf(obj, which){
+  if(!obj || typeof obj !== 'object') return null;
+  var slotName = which + 'Slot', keyName = which;
+  if(obj[slotName] !== undefined && obj[slotName] !== null) return obj[slotName];
+  return obj[keyName];
+}
+function teamRoles(t){
+  t = t || {};
+  return normalizeRoles(roleValueOf(t, 'leader'), roleValueOf(t, 'friend'), t.members);
+}
+/* 某槽位上现在是谁（槽位被清空后就没人了） */
+function roleKeyAt(slot, members){
+  var keys = normalizeTeamKeys(members || state.team);
+  if(typeof slot !== 'number' || slot < 0 || slot >= keys.length) return null;
+  return keys[slot] || null;
+}
+/* 交换两个槽位时标记要跟着卡片搬，否则标记载体会变成另一张卡 */
+function swapRoleSlot(slot, a, b){
+  if(slot === null || slot === undefined) return null;
+  if(slot === a) return b;
+  if(slot === b) return a;
+  return slot;
 }
 /* 把 state 上的标记对齐到当前队伍（任何改队伍的操作最终都会经过 save()） */
 function syncRoles(){
-  var r = normalizeRoles(state.leader, state.friend, state.team);
-  state.leader = r.leader;
-  state.friend = r.friend;
+  var r = normalizeRoles(state.leaderSlot, state.friendSlot, state.team);
+  state.leaderSlot = r.leaderSlot;
+  state.friendSlot = r.friendSlot;
   return r;
 }
-/* 队伍的完整指纹 = 成员顺序 + 队长 + 助战。
+/* 整队被替换时清掉标记：槽位号指向的是旧队伍里的卡，留着会「继承」到新卡上 */
+function clearRoles(){
+  state.leaderSlot = null;
+  state.friendSlot = null;
+}
+/* 队伍的完整指纹 = 成员顺序 + 队长槽位 + 助战槽位。
    编队去重与「当前」高亮都以它为准：同 7 个人但队长不同，算两套编队。 */
 function teamFullSignature(t){
   t = t || {};
-  var r = normalizeRoles(t.leader, t.friend, t.members);
-  return teamSignature(t.members) + '|' + (r.leader || '-') + '|' + (r.friend || '-');
+  var r = teamRoles(t);
+  return teamSignature(t.members) + '|' + r.leaderSlot + '|' + r.friendSlot;
 }
 /* 当前队伍的编队对象形态（喂给上面几个纯函数） */
 function currentTeamObj(){
-  return { members: state.team, leader: state.leader, friend: state.friend };
+  return { members: state.team, leaderSlot: state.leaderSlot, friendSlot: state.friendSlot };
 }
 /* 导入时把编队成员里指向自建卡的旧 id 换成新 id（图鉴卡 r: 的 id 是稳定的，无需换） */
 function remapTeamMembers(members, idMap){
@@ -1042,11 +1132,8 @@ function remapTeamMembers(members, idMap){
     return k;
   });
 }
-/* 同上，但用于单个标记（队长 / 助战）——复用 remapTeamMembers，避免两处逻辑走偏 */
-function remapRoleKey(key, idMap){
-  return remapTeamMembers([key], idMap)[0] || null;
-}
-/* 清洗外部（localStorage / 导入 JSON）来的编队数据 */
+/* 清洗外部（localStorage / 导入 JSON）来的编队数据。
+   旧数据里的 leader / friend 是角色 key，这里统一迁移成槽位号（见 roleValueOf）。 */
 function normalizeTeams(arr){
   var out = [];
   if(!Array.isArray(arr)) return out;
@@ -1054,13 +1141,13 @@ function normalizeTeams(arr){
     if(!t || typeof t !== 'object') return;
     var members = teamFromMembers(t.members);
     if(!members.some(Boolean)) return;                       // 全员空位的编队直接丢弃
-    var r = normalizeRoles(t.leader, t.friend, members);
+    var r = normalizeRoles(roleValueOf(t,'leader'), roleValueOf(t,'friend'), members);
     out.push({
       id: String(t.id || ('t' + i)),
       name: String(t.name || ('编队 ' + (out.length + 1))).slice(0, 40),
       members: members,
-      leader: r.leader,
-      friend: r.friend,
+      leaderSlot: r.leaderSlot,
+      friendSlot: r.friendSlot,
       createdAt: String(t.createdAt || '')
     });
   });
@@ -1085,8 +1172,14 @@ function load(){
         ? s.turns.map(function(r){ return normalizeTeamKeys(r).slice(0,3); })
         : [];
       state.turnCount = Math.max(1, parseInt(s.turnCount,10) || DEFAULT_TURNS);
-      state.leader = s.leader || null;
-      state.friend = s.friend || null;
+      /* 2.5.0 起标记存槽位号；旧存档里是角色 key，交给 normalizeRoles 迁移 */
+      var r0 = normalizeRoles(
+        (s.leaderSlot !== undefined) ? s.leaderSlot : s.leader,
+        (s.friendSlot !== undefined) ? s.friendSlot : s.friend,
+        state.team
+      );
+      state.leaderSlot = r0.leaderSlot;
+      state.friendSlot = r0.friendSlot;
       syncRoles();                       // 标记必须是队伍成员，读档时对齐一次
     }
   }catch(e){}
@@ -1484,7 +1577,7 @@ function renderTeam(){
     }
     var c = resolve(key);
     var t = typeOf(c ? c.type : 'none');
-    var tag = roleTagOf(key);
+    var tag = roleTagOf(i);          // 按槽位判定：同名两张时只有被选中的那一张带徽标
     return '<div class="team-slot filled' + (tag ? ' has-role' : '') + '" data-pos="' + i + '" draggable="true" ' +
         'style="border-color:' + t.color + '55">' +
       '<span class="idx">' + (i+1) + '</span>' +
@@ -1498,29 +1591,27 @@ function renderTeam(){
   }).join('');
 }
 
-/* 队长 / 助战选择器：列出当前队伍里的角色（同名两张只占一项，标注它占了哪几个槽位） */
+/* 队长 / 助战选择器：**按槽位**列出，所以同名两张会各占一项，
+   想标哪一张就选哪一张（这是「只标一张卡」的关键） */
 function renderRoles(){
-  var items = [], seen = {};
-  state.team.forEach(function(k, i){
-    if(!k) return;
-    if(seen[k] === undefined){ seen[k] = items.length; items.push({ key:k, slots:[i] }); }
-    else items[seen[k]].slots.push(i);
-  });
-  [['#selLeader','leader'], ['#selFriend','friend']].forEach(function(pair){
+  var items = [];
+  state.team.forEach(function(k, i){ if(k) items.push({ key:k, slot:i }); });
+  [['#selLeader','leaderSlot'], ['#selFriend','friendSlot']].forEach(function(pair){
     var sel = $(pair[0]);
     if(!sel) return;
-    var cur = state[pair[1]] || '';
+    var curSlot = state[pair[1]];
+    var cur = (curSlot === null || curSlot === undefined) ? '' : String(curSlot);
     var html = '<option value="">（未设置）</option>';
     items.forEach(function(it){
       var c = resolve(it.key);
-      var lab = it.slots.map(function(i){ return i+1; }).join('/');
-      html += '<option value="' + esc(it.key) + '"' + (it.key === cur ? ' selected' : '') + '>' +
-        esc(lab + '. ' + (c ? dispName(c) : '（已移除）')) + '</option>';
+      html += '<option value="' + it.slot + '"' + (String(it.slot) === cur ? ' selected' : '') + '>' +
+        esc('槽 ' + (it.slot + 1) + ' · ' + (c ? dispName(c) : '（已移除）')) + '</option>';
     });
     sel.innerHTML = html;
     sel.disabled = !items.length;
-    sel.title = items.length ? '从队伍的 ' + items.length + ' 名角色中选（同名两张视为同一人）'
-                             : '队伍还是空的，先从左侧选角色';
+    sel.title = items.length
+      ? '按槽位选：同名两张会各占一项，可以一张当队长、另一张当助战'
+      : '队伍还是空的，先从左侧选角色';
   });
 }
 
@@ -1533,19 +1624,19 @@ function renderTeamPresets(){
 
   html += teams.map(function(t){
     var isCur = teamFullSignature(t) === cur;
-    var r = normalizeRoles(t.leader, t.friend, t.members);
-    var dots = t.members.map(function(k){
-      var cls = ((k && k === r.leader) ? ' lead' : '') + ((k && k === r.friend) ? ' fr' : '');
+    var r = teamRoles(t);
+    var dots = t.members.map(function(k, i){
+      var cls = ((k && i === r.leaderSlot) ? ' lead' : '') + ((k && i === r.friendSlot) ? ' fr' : '');
       var c = resolve(k);
       return '<i' + (cls ? ' class="' + cls.slice(1) + '"' : '') +
         ' style="background:' + (c ? typeOf(c.type).color : '#39435a') + '"></i>';
     }).join('');
     var tip = t.members.map(function(k, i){
       var c = resolve(k);
-      var mark = ((k && k === r.leader) ? '  👑 队长' : '') + ((k && k === r.friend) ? '  🤝 助战' : '');
+      var mark = ((k && i === r.leaderSlot) ? '  👑 队长' : '') + ((k && i === r.friendSlot) ? '  🤝 助战' : '');
       return (i+1) + '. ' + (c ? dispName(c) : (k ? '（已移除）' : '空位')) + mark;
     }).join('&#10;');
-    var glyph = (r.leader ? '👑' : '') + (r.friend ? '🤝' : '');
+    var glyph = (r.leaderSlot !== null ? '👑' : '') + (r.friendSlot !== null ? '🤝' : '');
     return '<span class="tp' + (isCur ? ' cur' : '') + '" data-id="' + esc(t.id) + '" ' +
         'title="点击载入编队：' + esc(t.name) + '&#10;&#10;' + tip + '">' +
       '<span class="body">' +
@@ -1569,6 +1660,11 @@ function renderTeamPresets(){
    ======================================================= */
 function renderDeckStrip(hiSlots){
   var box = $('#deckStrip');
+  /* 标记按「这一屏的槽位 + 每格角色」解析，保证每个标记只落在一张卡上 */
+  var allSlots = [];
+  for(var s=0;s<SLOTS;s++) allSlots.push(s);
+  var leadPos = rolePosAmong(allSlots, state.deck, state.leaderSlot);
+  var frPos   = rolePosAmong(allSlots, state.deck, state.friendSlot);
   var html = '<span class="lab">当前牌序</span>';
   for(var i=0;i<SLOTS;i++){
     var c = resolve(state.deck[i]);
@@ -1579,7 +1675,8 @@ function renderDeckStrip(hiSlots){
       '<span class="n">' + (i+1) + '</span>' +
       '<span style="color:' + t.color + '">●</span>' +
       '<span>' + esc(c ? c.name : '空') + '</span>' +
-      roleTagOf(state.deck[i]) +
+      (i === leadPos ? roleTagHTML('lead') : '') +
+      (i === frPos ? roleTagHTML('fr') : '') +
     '</span>';
   }
   box.innerHTML = html;
@@ -1588,7 +1685,7 @@ function renderDeckStrip(hiSlots){
 /* =======================================================
    渲染：回合列表
    ======================================================= */
-function cardHTML(t, pos, key){
+function cardHTML(t, pos, key, roleCls){
   var c = resolve(key);
   var t2 = typeOf(c ? c.type : 'none');
   var lab = slotLabels(t)[pos];
@@ -1608,7 +1705,7 @@ function cardHTML(t, pos, key){
       'style="--c:' + t2.color + '">' + tag +
     '<div class="top">' +
       '<span class="slot-lab">槽 ' + lab + '</span>' +
-      roleTagOf(key) +
+      roleTagHTML(roleCls) +
       '<span class="ty" style="background:' + t2.color + '">' + t2.name + '</span>' +
       '<span class="nudge">' +
         '<button class="mini" data-act="left" data-turn="' + t + '" data-pos="' + pos + '"' + (pos===0?' disabled':'') + '>◀</button>' +
@@ -1631,6 +1728,9 @@ function renderTurns(){
   }
   box.innerHTML = state.turns.map(function(row, t){
     var sl = slotsOf(t);
+    /* 每个标记在**本回合**只落一张卡：先认标记槽位，换过槽位后按角色认 */
+    var leadPos = rolePosAmong(sl, row || [], state.leaderSlot);
+    var frPos   = rolePosAmong(sl, row || [], state.friendSlot);
     return '<div class="turn" data-turn="' + t + '">' +
       '<div class="turn-head">' +
         '<span class="turn-no"><span class="bar"></span>第 ' + (t+1) + ' 回合</span>' +
@@ -1641,7 +1741,8 @@ function renderTurns(){
         /* 必须读回合快照而非当前牌序：两个回合可能共用同一个槽位，
            若读牌序会把「更靠后的调整」倒灌进历史回合的显示 */
         sl.map(function(s, pos){
-          return cardHTML(t, pos, (row && row[pos] !== undefined) ? row[pos] : null);
+          var roleCls = (pos === leadPos) ? 'lead' : ((pos === frPos) ? 'fr' : '');
+          return cardHTML(t, pos, (row && row[pos] !== undefined) ? row[pos] : null, roleCls);
         }).join('') +
       '</div>' +
     '</div>';
@@ -1674,7 +1775,7 @@ function renderSummary(){
       var txt = arr.length > 24 ? arr.slice(0,24).join(', ') + ' …' : arr.join(', ');
       return '<div class="sum-row">' +
         '<span class="dot" style="background:' + t.color + ';color:' + t.color + '"></span>' +
-        '<span class="nm">' + esc(dispName(c) || '（已移除）') + roleTagOf(id) + '</span>' +
+        '<span class="nm">' + esc(dispName(c) || '（已移除）') + roleTagForKey(id) + '</span>' +
         '<span class="tn">' + txt + '<br><span style="opacity:.6">共 ' + arr.length + ' 回合</span></span>' +
       '</div>';
     }).join('');
@@ -1826,11 +1927,12 @@ function applyTeamPreset(id){
     toast('当前队伍已经是「' + t.name + '」'); return;
   }
   state.team = teamFromMembers(t.members);
-  var r = normalizeRoles(t.leader, t.friend, state.team);
-  state.leader = r.leader;
-  state.friend = r.friend;
+  var r = teamRoles(t);
+  state.leaderSlot = r.leaderSlot;
+  state.friendSlot = r.friendSlot;
   rebuild();                                  // 内部会 save + renderAll
-  toast('已载入编队「' + t.name + '」' + (r.leader ? '（队长 ' + nameOf(r.leader) + '）' : ''));
+  var lk = roleKeyAt(r.leaderSlot);
+  toast('已载入编队「' + t.name + '」' + (lk ? '（队长 ' + nameOf(lk) + '）' : ''));
 }
 function removeTeamPreset(id){
   var t = teamById(id);
@@ -1847,7 +1949,7 @@ function openTeamModal(id){
   if(editingTeamId && !t){ toast('编队不存在'); return; }
 
   var members = teamFromMembers(t ? t.members : state.team);
-  var r = normalizeRoles(t ? t.leader : state.leader, t ? t.friend : state.friend, members);
+  var r = t ? teamRoles(t) : { leaderSlot: state.leaderSlot, friendSlot: state.friendSlot };
   $('#teamModalTitle').textContent = t ? '重命名编队' : '保存当前编队';
   $('#teamName').value = t ? t.name : autoTeamName();
   $('#teamConfirm').textContent = t ? '保存名称' : '保存编队';
@@ -1857,7 +1959,7 @@ function openTeamModal(id){
     return '<span class="mini' + (c ? '' : ' empty') + '">' +
         '<b style="background:' + col + '"></b>' +
         (i+1) + '. ' + esc(c ? dispName(c) : (k ? '（已移除）' : '空位')) +
-        roleTagWith(k, r.leader, r.friend) +
+        roleTagWith(k ? i : null, r.leaderSlot, r.friendSlot) +
       '</span>';
   }).join('');
   $('#maskTeam').classList.add('on');
@@ -1880,9 +1982,9 @@ function confirmTeamModal(){
 
   var members = teamFromMembers(state.team);
   if(!members.some(Boolean)){ toast('队伍还是空的，先从左侧选几个角色'); return; }
-  var r = normalizeRoles(state.leader, state.friend, members);
+  var r = normalizeRoles(state.leaderSlot, state.friendSlot, members);
   /* 去重看「完整指纹」：同 7 个人但队长 / 助战不同，算两套不同的编队 */
-  var sig = teamFullSignature({ members: members, leader: r.leader, friend: r.friend });
+  var sig = teamFullSignature({ members: members, leaderSlot: r.leaderSlot, friendSlot: r.friendSlot });
   var dup = teams.filter(function(x){ return teamFullSignature(x) === sig; })[0];
   if(dup){
     editingTeamId = null;
@@ -1892,9 +1994,11 @@ function confirmTeamModal(){
   }
   if(teams.some(function(x){ return x.name === name; })){ toast('已有同名编队，换个名字'); return; }
 
-  teams.push({ id: uid('t'), name: name, members: members, leader: r.leader, friend: r.friend, createdAt: new Date().toISOString() });
+  teams.push({ id: uid('t'), name: name, members: members,
+               leaderSlot: r.leaderSlot, friendSlot: r.friendSlot,
+               createdAt: new Date().toISOString() });
   save(); renderTeamPresets();
-  toast('已保存编队「' + name + '」' + (r.leader ? '（队长 ' + nameOf(r.leader) + '）' : ''));
+  toast('已保存编队「' + name + '」' + (r.leaderSlot !== null ? '（队长 槽 ' + (r.leaderSlot+1) + '）' : ''));
   $('#maskTeam').classList.remove('on');
 }
 /* 从外部（导入 JSON）批量入库编队，同名跳过 */
@@ -1907,7 +2011,7 @@ function importTeamArray(arr){
   incoming.forEach(function(t){
     if(exist[t.name]) return;
     teams.push({ id: uid('t'), name: t.name, members: t.members,
-                 leader: t.leader, friend: t.friend,
+                 leaderSlot: t.leaderSlot, friendSlot: t.friendSlot,
                  createdAt: t.createdAt || new Date().toISOString() });
     exist[t.name] = true;
     added++;
@@ -1939,14 +2043,19 @@ $('#maskTeam').addEventListener('click', function(e){ if(e.target === this) this
    事件：队长 / 助战
    ======================================================= */
 /* 设置标记的唯一入口（UI 与对外接口共用）。
-   返回 false = 没改动：不在队伍里 / 本来就是它。
-   队长与助战可以是同一名角色（自己带一张 + 借好友一张同名卡），不再互斥。 */
-function setRole(which, key){
+   v 可以是槽位号（UI 走这条），也可以是角色 key（对外接口 / 旧数据，取第一次出现的槽位）。
+   返回 false = 没改动：不在队伍里 / 与另一个标记撞了同一张卡 / 本来就是它。 */
+function setRole(which, v){
   if(which !== 'leader' && which !== 'friend') return false;
-  var want = normRoleKey(key);
-  if(want && state.team.indexOf(want) < 0) return false;    // 必须是队伍成员
-  if((state[which] || null) === want) return false;
-  state[which] = want;
+  var name = which + 'Slot';
+  var slot = roleSlotOf(v, state.team);
+  var given = !(v === null || v === undefined || v === '');
+  if(given && slot === null) return false;                  // 必须是队伍里的某个槽位
+  var otherName = (which === 'leader') ? 'friendSlot' : 'leaderSlot';
+  if(slot !== null && slot === state[otherName]) return false;   // 同一张卡不能兼两职
+  var cur = (state[name] === null || state[name] === undefined) ? null : state[name];
+  if(cur === slot) return false;
+  state[name] = slot;
   /* 标记会出现在队伍格 / 牌序条 / 回合卡 / 汇总 / 编队「当前」高亮上，一起刷新 */
   save();
   renderTeam(); renderRoles(); renderTeamPresets();
@@ -1956,12 +2065,26 @@ function setRole(which, key){
 function onRoleChange(which){
   var sel = $(which === 'leader' ? '#selLeader' : '#selFriend');
   if(!sel) return;
-  var val = sel.value || null;
-  if(!setRole(which, val)) return;
-  var other = (which === 'leader') ? state.friend : state.leader;
-  var same = val && val === other ? '（与' + (which === 'leader' ? '助战' : '队长') + '同一人）' : '';
-  if(val) toast((which === 'leader' ? '队长已设为 ' : '助战已设为 ') + nameOf(val) + same);
-  else    toast(which === 'leader' ? '已取消队长标记' : '已取消助战标记');
+  var name = which + 'Slot';
+  var raw = sel.value;
+  var slot = (raw === '' || raw === null || raw === undefined) ? null : parseInt(raw, 10);
+  var otherName = (which === 'leader') ? 'friendSlot' : 'leaderSlot';
+  if(slot !== null && slot === state[otherName]){
+    var same = teamSlotsOf(state.team[slot]).filter(function(i){ return i !== slot; });
+    toast('队长和助战不能是同一张卡' +
+      (same.length ? '（同名的另一张在槽 ' + same.map(function(i){ return i+1; }).join('/') + '，可以选它）'
+                   : '（换个角色，或先加一张同名卡）'));
+    sel.value = (state[name] === null || state[name] === undefined) ? '' : String(state[name]);
+    return;
+  }
+  if(!setRole(which, slot)) return;
+  if(slot !== null){
+    var c = resolve(state.team[slot]);
+    toast((which === 'leader' ? '队长' : '助战') + '已设为 槽 ' + (slot+1) + ' · ' +
+      (c ? dispName(c) : '（已移除）'));
+  }else{
+    toast(which === 'leader' ? '已取消队长标记' : '已取消助战标记');
+  }
 }
 $('#selLeader').addEventListener('change', function(){ onRoleChange('leader'); });
 $('#selFriend').addEventListener('change', function(){ onRoleChange('friend'); });
@@ -2172,6 +2295,10 @@ $('#teamGrid').addEventListener('drop', function(e){
       toast('队伍里已有 2 张「' + nameOf(key) + '」（自己 1 + 助战 1），不能再加');
       return;
     }
+    /* 换人 = 这一格换了另一张卡，原本挂在这一格上的标记要摘掉
+       （否则标记会「继承」到新卡上，看起来像另一张卡也成了队长） */
+    if(state.leaderSlot === to) state.leaderSlot = null;
+    if(state.friendSlot === to)  state.friendSlot  = null;
     state.team[to] = key;
     clearDragUI();
     rebuild();
@@ -2185,6 +2312,9 @@ $('#teamGrid').addEventListener('drop', function(e){
   var from2 = dragSrc.pos;
   if(to !== from2){
     var tmp = state.team[from2]; state.team[from2] = state.team[to]; state.team[to] = tmp;
+    /* 槽位互换后，标记要跟着卡片一起搬，否则会落到另一张卡上 */
+    state.leaderSlot = swapRoleSlot(state.leaderSlot, from2, to);
+    state.friendSlot = swapRoleSlot(state.friendSlot, from2, to);
     rebuild();
     toast('已按新初始顺序重新推演');
   }
@@ -2318,10 +2448,15 @@ $('#btnReset').addEventListener('click', function(){
    事件：队伍工具
    ======================================================= */
 $('#btnShuffle').addEventListener('click', function(){
-  for(var i = state.team.length - 1; i > 0; i--){
-    var j = Math.floor(Math.random() * (i+1));
-    var tmp = state.team[i]; state.team[i] = state.team[j]; state.team[j] = tmp;
-  }
+  var n = state.team.length, i, j, t;
+  var src = [];                                  // src[新位置] = 原槽位号
+  for(i=0;i<n;i++) src.push(i);
+  for(i=n-1;i>0;i--){ j = Math.floor(Math.random()*(i+1)); t = src[i]; src[i] = src[j]; src[j] = t; }
+  var old = state.team.slice(), toNew = {};
+  for(i=0;i<n;i++){ state.team[i] = old[src[i]]; toNew[src[i]] = i; }
+  function move(slot){ return (slot === null || slot === undefined) ? null : toNew[slot]; }
+  state.leaderSlot = move(state.leaderSlot);     // 标记跟着卡片一起打乱
+  state.friendSlot = move(state.friendSlot);
   rebuild(); toast('已随机打乱初始顺序');
 });
 $('#btnAutoFill').addEventListener('click', function(){
@@ -2350,8 +2485,9 @@ $('#btnCopyPlan').addEventListener('click', function(){
   var lines = ['【龙珠爆裂大战 · 战斗排序】共 ' + state.turns.length + ' 回合'];
   lines.push('初始顺序：' + state.team.map(function(id,i){ return (i+1) + '.' + nameOf(id); }).join('  '));
   var roles = [];
-  if(state.leader) roles.push('队长 ' + nameOf(state.leader));
-  if(state.friend) roles.push('助战 ' + nameOf(state.friend));
+  var lk = roleKeyAt(state.leaderSlot), fk = roleKeyAt(state.friendSlot);
+  if(lk) roles.push('队长 槽' + (state.leaderSlot+1) + ' ' + nameOf(lk));
+  if(fk) roles.push('助战 槽' + (state.friendSlot+1) + ' ' + nameOf(fk));
   if(roles.length) lines.push(roles.join(' ｜ '));
   lines.push('');
   state.turns.forEach(function(row, t){
@@ -2511,8 +2647,9 @@ function importBundle(data){
     // 编队里的自建卡引用需要跟着换 id，否则导入后会变成「（已移除）」
     var fixed = tarr.map(function(t){
       if(!t || typeof t !== 'object') return t;
+      /* 标记是槽位号，不随 id 重写而变（只有成员里的自建卡引用需要换 id） */
       return { id:t.id, name:t.name, members:remapTeamMembers(t.members, idMap),
-               leader:remapRoleKey(t.leader, idMap), friend:remapRoleKey(t.friend, idMap),
+               leaderSlot:roleValueOf(t,'leader'), friendSlot:roleValueOf(t,'friend'),
                createdAt:t.createdAt };
     });
     nt = importTeamArray(fixed);
@@ -2662,7 +2799,7 @@ $('#btnLang').addEventListener('click', function(){
    对外接口（为后续 Wiki 抓取预留）
    ======================================================= */
 window.DokkanSorter = {
-  version: '2.4.0',
+  version: '2.5.0',
   typeMap: TYPES,
   /* --- 图鉴 --- */
   getRoster: function(){ return roster.slice(); },
@@ -2680,6 +2817,7 @@ window.DokkanSorter = {
     state.team = fixArr((ids||[]).slice(0,SLOTS).map(function(id){
       return (id === null || id === undefined || id === '') ? null : ('r:' + id);
     }));
+    clearRoles();                      // 整队被换掉，旧标记的槽位已不是同一张卡
     rebuild(); return state.team;
   },
   getNameMode: function(){ return nameMode; },
@@ -2688,7 +2826,7 @@ window.DokkanSorter = {
   addPresets: function(arr, opts){ return importPresetArray(arr, opts); },
   removePreset: function(name){ presets = presets.filter(function(p){ return p.name !== name; }); save(); renderAll(); },
   setTeamByIds: function(ids){
-    state.team = fixArr(ids); rebuild(); return state.team;
+    state.team = fixArr(ids); clearRoles(); rebuild(); return state.team;
   },
   setTeamByNames: function(names){
     var keys = (names||[]).slice(0,SLOTS).map(function(n){
@@ -2700,7 +2838,7 @@ window.DokkanSorter = {
       return null;
     });
     while(keys.length < SLOTS) keys.push(null);
-    state.team = fixArr(keys); rebuild(); return state.team;
+    state.team = fixArr(keys); clearRoles(); rebuild(); return state.team;
   },
   getState: function(){ return JSON.parse(JSON.stringify(state)); },
   /* ---- 编队（队伍预设）---- */
@@ -2712,9 +2850,9 @@ window.DokkanSorter = {
     name = String(name || autoTeamName()).trim().slice(0, 40);
     if(!name) return null;
     if(teams.some(function(t){ return t.name === name; })) return null;
-    var r = normalizeRoles(state.leader, state.friend, members);
+    var r = normalizeRoles(state.leaderSlot, state.friendSlot, members);
     var t = { id: uid('t'), name: name, members: members,
-              leader: r.leader, friend: r.friend, createdAt: new Date().toISOString() };
+              leaderSlot: r.leaderSlot, friendSlot: r.friendSlot, createdAt: new Date().toISOString() };
     teams.push(t); save(); renderTeamPresets();
     return JSON.parse(JSON.stringify(t));
   },
@@ -2726,14 +2864,23 @@ window.DokkanSorter = {
     return true;
   },
   getTeamSignature: function(){ return teamSignature(state.team); },
-  /* ---- 队长 / 助战 ---- */
+  /* ---- 队长 / 助战 ----
+     槽位号是权威身份（同名两张时靠它区分）；leader / friend 是可读的角色 key 镜像。 */
   getRoles: function(){
     var r = syncRoles();
-    return { leader: r.leader, friend: r.friend };
+    return {
+      leaderSlot: r.leaderSlot, friendSlot: r.friendSlot,
+      leader: roleKeyAt(r.leaderSlot), friend: roleKeyAt(r.friendSlot)
+    };
   },
-  setLeader: function(key){ return setRole('leader', key); },
-  setFriend: function(key){ return setRole('friend', key); },
-  setRoles: function(leader, friend){ return { leader: setRole('leader', leader), friend: setRole('friend', friend) }; },
+  /* 传槽位号（推荐，能区分同名两张）或角色 key（取第一次出现的槽位） */
+  setLeader: function(v){ return setRole('leader', v); },
+  setFriend: function(v){ return setRole('friend', v); },
+  setLeaderSlot: function(i){ return setRole('leader', i); },
+  setFriendSlot: function(i){ return setRole('friend', i); },
+  setRoles: function(leader, friend){
+    return { leaderSlot: setRole('leader', leader), friendSlot: setRole('friend', friend) };
+  },
   /* ---- 通用导入 ---- */
   importBundle: function(data){ return importBundle(data); },
   getPlan: function(){

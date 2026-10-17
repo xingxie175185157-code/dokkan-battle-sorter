@@ -352,11 +352,12 @@ ok($$('#deckStrip .chip')[0].draggable === true, '牌序条槽位可拖拽');
   ok(DS.getState().team.filter(Boolean).length === 7, '测试收尾：队伍已还原为满编 7 人');
 }
 
-/* ---------- 6. 队长 / 助战标记 ---------- */
+/* ---------- 6. 队长 / 助战（按槽位，只标一张卡） ---------- */
 {
   const stateRaw = () => win.localStorage.getItem('dbs_sorter_state_v1') || '';
   const setSel = (sel, val) => { sel.value = val; sel.dispatchEvent(ev('change')); };
   const chipOf = (id) => $$('#teamPresets .tp[data-id]').find(c => c.dataset.id === id);
+  const tagCount = (cls) => $$('#teamGrid .team-slot .role-tag.' + cls).length;
 
   DS.setTeamByRosterIds(ids);                       // 用图鉴卡铺一套干净的满编队伍
   const team = DS.getState().team.slice();
@@ -366,48 +367,43 @@ ok($$('#deckStrip .chip')[0].draggable === true, '牌序条槽位可拖拽');
   ok(!!$('#roleBar') && !!$('#selLeader') && !!$('#selFriend'), '队伍区有队长 / 助战选择器');
   ok($('#selLeader').disabled === false, '队伍有成员时选择器可用');
   const opts = $$('#selLeader option').map(o => o.value);
-  ok(opts[0] === '' && opts.length === keys.length + 1,
-     `选择器列出「未设置」+ 7 名队员（共 ${opts.length} 项）`);
+  ok(opts[0] === '' && opts.length === 8, `选择器按槽位列出：未设置 + 7 个槽位（共 ${opts.length} 项）`);
+  ok(opts.slice(1).join(',') === '0,1,2,3,4,5,6', '选项值就是槽位号 0~6');
   ok($$('#teamGrid .team-slot .role-tag').length === 0, '未指定时队伍格上没有标记');
   ok(!/已移除/.test($('#teamGrid').textContent), '队伍格里的角色名都能正常解析');
 
-  /* --- 指定队长 --- */
-  const leadKey = keys[0], frKey = keys[1];
-  setSel($('#selLeader'), leadKey);
-  ok(DS.getRoles().leader === leadKey, '队长已记录到 state');
-  ok($$('#teamGrid .team-slot .role-tag.lead').length === 1, '队伍格里队长那一格显示「队长」徽标');
-  ok($$('#teamGrid .team-slot')[team.indexOf(leadKey)].querySelector('.role-tag.lead') !== null,
-     '队长徽标挂在正确的槽位上');
-  ok($$('#summary .sum-row .role-tag.lead').length === 1, '出场回合汇总里队长带标记');
-  const turnsWithLead = DS.getState().turns.filter(r => r.includes(leadKey)).length;
+  /* --- 指定队长（按槽位） --- */
+  const leadSlot = 0, frSlot = 1;
+  setSel($('#selLeader'), String(leadSlot));
+  ok(DS.getRoles().leaderSlot === leadSlot, '队长记为槽位号 0');
+  ok(DS.getRoles().leader === keys[0], 'getRoles().leader 同步给出该槽位的角色 key');
+  ok(tagCount('lead') === 1, '队伍格里只有一张卡带「队长」徽标');
+  ok($$('#teamGrid .team-slot')[leadSlot].querySelector('.role-tag.lead') !== null,
+     '队长徽标挂在槽位 1 那一格');
+  const turnsWithLead = DS.getState().turns.filter(r => r.includes(keys[0])).length;
   ok($$('#turns .card .role-tag.lead').length === turnsWithLead,
-     `回合卡片上队长徽标数 = 队长出场回合数（${turnsWithLead}）`);
-  ok(stateRaw().indexOf('"leader"') >= 0, '队长标记已写入 localStorage');
+     `每回合最多一枚队长徽标，总数 = 队长出场回合数（${turnsWithLead}）`);
+  ok(stateRaw().indexOf('"leaderSlot"') >= 0, '队长标记（槽位号）已写入 localStorage');
 
   /* --- 指定助战 --- */
-  setSel($('#selFriend'), frKey);
-  ok(DS.getRoles().friend === frKey, '助战已记录到 state');
-  ok($$('#teamGrid .team-slot .role-tag.fr').length === 1, '队伍格里助战那一格显示「助战」徽标');
-  ok($$('#deckStrip .chip .role-tag').length === 2, '当前牌序条上两个标记都显示');
+  setSel($('#selFriend'), String(frSlot));
+  ok(DS.getRoles().friendSlot === frSlot, '助战记为槽位号 1');
+  ok(tagCount('fr') === 1, '队伍格里只有一张卡带「助战」徽标');
+  ok($$('#deckStrip .chip .role-tag').length === 2, '当前牌序条上两个标记各一枚');
 
-  /* --- 队长与助战可以是同一名角色（自己一张 + 借好友一张同名卡）--- */
-  setSel($('#selFriend'), leadKey);
-  ok(DS.getRoles().leader === leadKey && DS.getRoles().friend === leadKey,
-     '队长与助战设为同一名角色：两个标记都成立');
-  ok($$('#teamGrid .team-slot .role-tag').length === 2,
-     '同一格上同时显示「队长」「助战」两枚徽标');
-  ok($$('#teamGrid .team-slot')[team.indexOf(leadKey)].querySelectorAll('.role-tag').length === 2,
-     '两枚徽标都挂在同一个角色上');
-  setSel($('#selFriend'), frKey);                    // 还原成两人，后面的断言沿用
+  /* --- 同一张卡不能兼任 --- */
+  setSel($('#selFriend'), String(leadSlot));
+  ok(DS.getRoles().friendSlot === frSlot, '选同一张卡当助战 → 拒绝，助战保持原值');
+  ok(/不能是同一张卡/.test($('#toast').textContent), `撞卡时给出提示：${$('#toast').textContent}`);
 
-  /* --- 标记跟人走，不跟槽位走 --- */
-  const beforeRoles = DS.getRoles();
+  /* --- 标记跟着卡片走：拖动交换初始槽位 --- */
+  const before = DS.getRoles();
   dragDrop($$('#teamGrid .team-slot')[0], $$('#teamGrid .team-slot')[5]);
-  ok(DS.getRoles().leader === beforeRoles.leader && DS.getRoles().friend === beforeRoles.friend,
-     '拖动交换初始槽位后，标记仍绑在角色上（没被换走）');
-  const newPos = DS.getState().team.indexOf(leadKey);
-  ok(newPos === 5 && $$('#teamGrid .team-slot')[5].querySelector('.role-tag.lead') !== null,
-     '队长换到新槽位后，徽标跟着到了新格子');
+  ok(DS.getRoles().leader === before.leader, '拖动换初始顺序后，队长仍是同一张卡');
+  ok(DS.getRoles().leaderSlot === 5, '标记槽位跟着卡片搬到槽位 6');
+  ok($$('#teamGrid .team-slot')[5].querySelector('.role-tag.lead') !== null,
+     '队长徽标跟着到了新格子');
+  ok($$('#teamGrid .team-slot')[0].querySelector('.role-tag.lead') === null, '旧格子上的队长徽标消失');
 
   /* --- 存编队：标记一并保存 --- */
   $('#btnTeamSave').click();
@@ -415,16 +411,18 @@ ok($$('#deckStrip .chip')[0].draggable === true, '牌序条槽位可拖拽');
   ok($$('#teamPreview .role-tag').length === 2, '保存弹窗的预览里显示队长 / 助战标记');
   $('#teamConfirm').click();
   const tagged = DS.getTeams().find(x => x.name === '带标记队');
-  ok(tagged && tagged.leader === DS.getRoles().leader && tagged.friend === DS.getRoles().friend,
-     '编队预设里保存了队长 / 助战');
+  ok(tagged && tagged.leaderSlot === DS.getRoles().leaderSlot && tagged.friendSlot === DS.getRoles().friendSlot,
+     '编队预设里保存了槽位号形式的标记');
   const lsTeams = win.localStorage.getItem('dbs_sorter_teams_v1') || '';
-  ok(/"leader"/.test(lsTeams) && /"friend"/.test(lsTeams), 'localStorage 的编队里带 leader / friend 字段');
+  ok(/"leaderSlot"/.test(lsTeams) && /"friendSlot"/.test(lsTeams),
+     'localStorage 的编队里带 leaderSlot / friendSlot');
+  ok(!/"leader":/.test(lsTeams), '不再写入旧的 leader / friend 角色字段');
   ok(!/"turns"|"deck"|turnCount/.test(lsTeams), '编队里依然不含回合排程');
 
   /* --- 清掉标记 → 同 7 人也能另存一套 --- */
   setSel($('#selLeader'), '');
   setSel($('#selFriend'), '');
-  ok(DS.getRoles().leader === null && DS.getRoles().friend === null, '两个标记都可以取消');
+  ok(DS.getRoles().leaderSlot === null && DS.getRoles().friendSlot === null, '两个标记都可以取消');
   ok($$('#teamGrid .team-slot .role-tag').length === 0, '取消后队伍格上的徽标消失');
   const n1 = DS.getTeams().length;
   $('#btnTeamSave').click();
@@ -432,33 +430,34 @@ ok($$('#deckStrip .chip')[0].draggable === true, '牌序条槽位可拖拽');
   $('#teamConfirm').click();
   ok(DS.getTeams().length === n1 + 1, '同 7 人但去掉标记 → 算另一套编队，允许保存');
   const plain = DS.getTeams().find(x => x.name === '无标记队');
-  ok(plain && plain.leader === null && plain.friend === null, '新编队里没有标记');
+  ok(plain && plain.leaderSlot === null && plain.friendSlot === null, '新编队里没有标记');
   ok($$('#teamPresets .tp.cur').length === 1 && $$('#teamPresets .tp.cur')[0].dataset.id === plain.id,
      '「当前」高亮跟着标记走（指向无标记那一套）');
 
   /* --- 载入编队：标记一并恢复 --- */
   $('#btnClearTeam').click();
   chipOf(tagged.id).click();
-  ok(DS.getRoles().leader === tagged.leader && DS.getRoles().friend === tagged.friend,
-     '载入编队后队长 / 助战一并恢复');
+  const rs = DS.getRoles();
+  ok(rs.leaderSlot === tagged.leaderSlot && rs.friendSlot === tagged.friendSlot,
+     '载入编队后队长 / 助战的槽位一并恢复');
   ok($$('#teamGrid .team-slot .role-tag').length === 2, '载入后队伍格上的两个徽标都回来了');
   ok($$('#teamPresets .tp.cur')[0].dataset.id === tagged.id, '载入后「当前」指向带标记那套');
 
-  /* --- 把队长本人移出队伍 → 标记自动摘掉 --- */
-  const li = DS.getState().team.indexOf(tagged.leader);
-  $$('#teamGrid .team-slot')[li].querySelector('[data-act="rm"]').click();
-  ok(DS.getRoles().leader === null, '队长本人被移出队伍 → 标记自动摘掉');
+  /* --- 把队长那张卡移出队伍 → 标记自动摘掉 --- */
+  const leadNow = DS.getRoles().leaderSlot;
+  $$('#teamGrid .team-slot')[leadNow].querySelector('[data-act="rm"]').click();
+  ok(DS.getRoles().leaderSlot === null, '队长那张卡被移出队伍 → 标记自动摘掉');
   ok($$('#teamGrid .team-slot .role-tag.lead').length === 0, '队伍格上队长徽标随之消失');
-  ok(DS.getRoles().friend === tagged.friend, '助战标记不受影响');
+  ok(DS.getRoles().friendSlot !== null, '助战标记不受影响');
 
   /* --- 对外接口 --- */
-  const some = DS.getState().team.filter(Boolean)[0];
-  ok(DS.setLeader(some) === true, 'DokkanSorter.setLeader() 可设队长');
-  ok(DS.getRoles().leader === some, 'setLeader() 生效');
+  DS.setTeamByRosterIds(ids);
+  ok(DS.setLeader(0) === true, 'setLeader(0) 按槽位设置');
+  ok(DS.getRoles().leaderSlot === 0, 'setLeader(槽位) 生效');
   ok(DS.setLeader('p:__不存在__') === false, 'setLeader() 拒绝不在队伍里的角色');
-  ok(DS.getRoles().leader === some, '被拒绝后队长保持不变');
+  ok(DS.getRoles().leaderSlot === 0, '被拒绝后队长保持不变');
 
-  /* --- 同名双角色：自己的 6 人 + 好友助战 1 人 --- */
+  /* --- 同名双角色：只能标其中一张 --- */
   DS.setTeamByRosterIds(ids);
   const dupKey = DS.getState().team[0];
   $$('#teamGrid .team-slot')[6].querySelector('[data-act="rm"]').click();   // 腾出助战位
@@ -477,21 +476,37 @@ ok($$('#deckStrip .chip')[0].draggable === true, '牌序条槽位可拖拽');
   ok(/已有 2 张/.test($('#toast').textContent), `第三张被拒绝：${$('#toast').textContent}`);
   ok(DS.getState().team.filter(k => k === dupKey).length === 2, '队里仍只有两份');
 
-  /* 选择器：同名两张只占一项 */
-  const dupOpts = $$('#selLeader option').map(o => o.value);
-  const distinct = new Set(DS.getState().team.filter(Boolean)).size;
-  ok(dupOpts.filter(v => v === dupKey).length === 1, '角色选择器里同名两张只列一项');
-  ok(dupOpts.length === distinct + 1,
-     `选择器按角色去重：未设置 + ${distinct} 名不同角色（共 ${dupOpts.length} 项）`);
+  /* ★ 核心：同名两张时，选一张当队长，只有那一张带徽标 */
+  const dupSlots = [];
+  DS.getState().team.forEach((k, i) => { if(k === dupKey) dupSlots.push(i); });
+  ok(dupSlots.length === 2, `同名两张分别占槽位 ${dupSlots.map(i => i + 1).join(' / ')}`);
+  ok($$('#selLeader option').filter(o => o.value !== '').length === DS.getState().team.filter(Boolean).length,
+     '选择器按槽位列出（同名两张各占一项）');
+  const labels = $$('#selLeader option').map(o => o.textContent);
+  ok(labels.some(t => new RegExp('槽 ' + (dupSlots[0] + 1) + ' ·').test(t)) &&
+     labels.some(t => new RegExp('槽 ' + (dupSlots[1] + 1) + ' ·').test(t)),
+     '两个槽位各有自己的选项，能分清是哪一张');
 
-  /* 同名角色同时当队长与助战：两张卡上都显示两枚徽标 */
-  setSel($('#selLeader'), dupKey);
-  setSel($('#selFriend'), dupKey);
-  ok(DS.getRoles().leader === dupKey && DS.getRoles().friend === dupKey,
-     '同名角色可以同时当队长与助战');
-  ok($$('#teamGrid .team-slot .role-tag.lead').length === 2 &&
-     $$('#teamGrid .team-slot .role-tag.fr').length === 2,
-     '两张同名卡上各自显示队长 / 助战徽标');
+  setSel($('#selLeader'), String(dupSlots[0]));
+  ok($$('#teamGrid .team-slot .role-tag.lead').length === 1,
+     '只给选中的那一张打「队长」徽标（另一张同名卡没有）');
+  ok($$('#teamGrid .team-slot')[dupSlots[0]].querySelector('.role-tag.lead') !== null &&
+     $$('#teamGrid .team-slot')[dupSlots[1]].querySelector('.role-tag.lead') === null,
+     '徽标只在被选中的那个槽位上');
+  ok($$('#turns .card .role-tag.lead').length <= DS.getState().turns.filter(r => r.includes(dupKey)).length,
+     '回合卡片上不会出现「两张同名卡都算队长」');
+
+  setSel($('#selFriend'), String(dupSlots[1]));
+  ok(DS.getRoles().leaderSlot === dupSlots[0] && DS.getRoles().friendSlot === dupSlots[1],
+     '同名的另一张可以当助战（一张队长 + 一张助战）');
+  ok($$('#teamGrid .team-slot .role-tag.lead').length === 1 &&
+     $$('#teamGrid .team-slot .role-tag.fr').length === 1,
+     '队伍格里仍是「队长」「助战」各一枚徽标');
+  ok($$('#teamGrid .team-slot')[dupSlots[1]].querySelector('.role-tag.fr') !== null,
+     '助战徽标挂在第二张同名卡上');
+
+  setSel($('#selFriend'), String(dupSlots[0]));
+  ok(DS.getRoles().friendSlot === dupSlots[1], '想用同一张卡兼任 → 拒绝，助战保持原值');
 
   /* 拖到回合时的提示要说明「同名两张里挑赶得上的那张」 */
   {
