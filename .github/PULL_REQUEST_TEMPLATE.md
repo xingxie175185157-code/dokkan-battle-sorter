@@ -20,9 +20,9 @@
 
 ## 测试
 
-- [ ] `npm run test:engine` 通过（引擎回归 124 项）
-- [ ] `npm run test:static` 通过（静态校验 67 项）
-- [ ] `npm run test:dom` 通过（真实页面 117 项）
+- [ ] `npm run test:engine` 通过（引擎回归 144 项）
+- [ ] `npm run test:static` 通过（静态校验 77 项）
+- [ ] `npm run test:dom` 通过（真实页面 128 项）
 - [ ] 若改了引擎 / 交互，已补充或更新对应回归用例
 
 <details>

@@ -1,6 +1,6 @@
 {
   "name": "dokkan-battle-sorter",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "private": true,
   "description": "《龙珠爆裂大战》战斗排序器 —— 7 人队伍、每回合上场 3 人的循环槽位推演、拖拽改序连锁重算、目标回放反推、编队（队伍预设）一键切换，附 1458 张全角色中文图鉴。零依赖单文件 Web 应用。",
   "keywords": [

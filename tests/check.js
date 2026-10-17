@@ -48,6 +48,7 @@ module.exports = {
   fixArr: fixArr,
   normRoleKey: normRoleKey, normalizeRoles: normalizeRoles, syncRoles: syncRoles,
   teamFullSignature: teamFullSignature, currentTeamObj: currentTeamObj, remapRoleKey: remapRoleKey,
+  teamSlotsOf: teamSlotsOf, copyCountOf: copyCountOf, planFromSlot: planFromSlot,
   seed: seedPresets,
   setPresets: function(a){ presets.length = 0; a.forEach(function(x){ presets.push(x); }); },
   names: function(row){ return row.map(function(id){ return (byId(id)||{}).name || '空'; }).join('-'); }
@@ -374,7 +375,7 @@ reset(12);
   eq(J(E.normalizeTeamKeys(false)), J([null,null,null,null,null,null,null]), '非数组输入安全退化');
 }
 
-/* ---- 用例27：队长 / 好友规整（normalizeRoles）---- */
+/* ---- 用例27：队长 / 助战规整（normalizeRoles）---- */
 {
   const J = (a) => JSON.stringify(a);
   const team = ['p:1','p:2','p:3','p:4','p:5','p:6','p:7'];
@@ -382,9 +383,9 @@ reset(12);
   eq(J(E.normalizeRoles('p:1','p:2', ['p:1','p:2',null,null,null,null,null])),
      J({leader:'p:1',friend:'p:2'}), '队伍不满员时同样成立');
   eq(E.normalizeRoles('p:X','p:2', team).leader, null, '队长不在队伍里 → 置空');
-  eq(E.normalizeRoles('p:1','p:9', team).friend, null, '好友不在队伍里 → 置空');
-  eq(E.normalizeRoles('p:1','p:1', team).friend, null, '一人兼任时清掉好友');
-  eq(E.normalizeRoles('p:1','p:1', team).leader, 'p:1', '一人兼任时队长仍保留');
+  eq(E.normalizeRoles('p:1','p:9', team).friend, null, '助战不在队伍里 → 置空');
+  eq(E.normalizeRoles('p:1','p:1', team).friend, 'p:1', '队长与助战可以是同一名角色（助战保留）');
+  eq(E.normalizeRoles('p:1','p:1', team).leader, 'p:1', '队长与助战同一人时队长也保留');
   eq(J(E.normalizeRoles(null, undefined, team)), J({leader:null,friend:null}), '不传标记 → 双空');
   eq(E.normalizeRoles('abc','p2', ['abc','p2',null,null,null,null,null]).leader, 'p:abc',
      '裸 id 写法两侧一起归一化，能对上成员');
@@ -433,9 +434,61 @@ reset(12);
   eq(J(E.syncRoles()), J({leader:null,friend:null}), '队伍清空 → 两个标记都摘掉');
   E.state.team = ['p:1','p:2','p:3','p:4','p:5','p:6','p:7'];
   E.state.leader = 'p:1'; E.state.friend = 'p:1';
-  eq(E.syncRoles().friend, null, '载入脏数据（一人兼任）时好友被清掉');
+  eq(E.syncRoles().friend, 'p:1', '队长与助战同一人时两个标记都保留');
   E.state.leader = null; E.state.friend = null;
   eq(J(E.currentTeamObj().members), J(['p:1','p:2','p:3','p:4','p:5','p:6','p:7']), 'currentTeamObj 取到当前队伍');
+}
+
+/* ---- 用例31：同名双角色（自己 1 + 助战 1）的槽位统计 ----
+   自己的队伍 6 人 + 好友助战 1 人，两者可以是同一张卡，所以同名最多两份 */
+{
+  const J = (a) => JSON.stringify(a);
+  E.state.team = ['p:1','p:2','p:3','p:4','p:5','p:1','p:7'];
+  eq(J(E.teamSlotsOf('p:1')), J([0,5]), '同名两份 → 两个槽位都记录');
+  eq(E.copyCountOf('p:1'), 2, '同名份数为 2');
+  eq(E.copyCountOf('p:2'), 1, '其他角色仍是 1 份');
+  eq(E.copyCountOf('p:9'), 0, '不在队伍里的角色为 0 份');
+  eq(E.copyCountOf(null), 0, '空 key 安全返回 0');
+  eq(E.normalizeRoles('p:1','p:1', E.state.team).friend, 'p:1', '同名角色可同时当队长与助战');
+  const sig1 = E.teamSignature(E.state.team);
+  eq(sig1.split('|').length, 7, '队形指纹按槽位算，仍是 7 段');
+  eq(E.teamSignature(['p:1','p:2','p:3','p:4','p:5','p:1','p:7']) === sig1, true,
+     '同名双角色的队伍指纹稳定（顺序不同才算不同）');
+}
+
+/* ---- 用例32：反推时自动挑选「赶得上的那一份」---- */
+{
+  // 第 2 回合上场槽位 4-5-6（0-based 3,4,5）；p:1 同时占槽位 1(0) 与 6(5)
+  E.state.team = ['p:1','p:2','p:3','p:4','p:5','p:1','p:7'];
+  E.rebuild(true); E.ensureTurns(8);
+
+  const onlyFirst = E.planFromSlot('p:1', 0, 1, 0);       // 只拿着槽位 1 那份去试
+  eq(onlyFirst.ok, false, '槽位 1 那一份赶不上第 2 回合');
+
+  const p = E.planPlacement('p:1', 1, 0);                 // 引擎应改用槽位 6 那一份
+  eq(p.ok, true, '同名第二份在窗口内 → 可行');
+  eq(p.copies, 2, '试算结果标明队中有 2 份同名');
+  eq(p.startSlot, 5, '选中的是槽位 6 的那一份（0-based 5）');
+  eq(p.steps.length, 0, '不需要任何前置调整');
+
+  const r = E.applyPlacement('p:1', 1, 0);
+  eq(r.ok, true, 'applyPlacement 执行成功');
+  eq(E.state.turns[1][0], 'p:1', '第 2 回合第 1 位确实是同名角色');
+  eq(E.copyCountOf('p:1'), 2, '落子后同名仍是两份（没有凭空多出第三份）');
+}
+
+/* ---- 用例33：同名双角色也不会丢人 / 造出第三份 ---- */
+{
+  const init = ['p:1','p:2','p:3','p:4','p:5','p:1','p:7'];
+  const sortJoin = (a) => a.slice().sort().join(',');
+  E.state.team = init.slice();
+  E.rebuild(true); E.ensureTurns(10);
+  E.swapInTurn(1, 0, 2);                                  // 第 2 回合（槽位 4-5-6）内部换序
+  const deck = E.state.deck.slice();
+  eq(deck.filter(function(k){ return k === 'p:1'; }).length, 2, '交换后牌序里同名仍是两份');
+  eq(deck.filter(Boolean).length, 7, '牌序无空位、没丢人');
+  eq(sortJoin(deck), sortJoin(init), '牌序的成员组成不变（不多不少）');
+  eq(E.state.turns[1].join(','), 'p:1,p:5,p:4', '第 2 回合按手动顺序上场');
 }
 
 console.log('\n结果: ' + pass + ' 通过 / ' + fail + ' 失败');

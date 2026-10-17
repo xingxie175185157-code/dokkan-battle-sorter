@@ -17,7 +17,7 @@
   --accent2:#ffc63d;
   --ok:#2fbf71;
   --danger:#e5484d;
-  --fr:#5ad1c4;          /* 好友标记色 */
+  --fr:#5ad1c4;          /* 助战标记色 */
   --radius:14px;
   --shadow:0 10px 30px rgba(0,0,0,.45);
 }
@@ -185,7 +185,7 @@ main{
 .team-slot .tp{font-size:10px;padding:1px 6px;border-radius:5px;font-weight:700;}
 .slot-ph{color:#4d5871;font-size:11.5px;}
 
-/* ---------- 队长 / 好友 ---------- */
+/* ---------- 队长 / 助战 ---------- */
 .role-bar{
   display:flex;gap:14px;flex-wrap:wrap;align-items:center;
   padding:9px 14px;border-bottom:1px solid var(--line);background:#0f131b;
@@ -202,7 +202,9 @@ main{
 .role-bar select:disabled{opacity:.5;}
 .role-bar .role-hint{font-size:11px;color:var(--muted);opacity:.75;}
 
-/* 角色标记徽标：队伍格 / 回合卡 / 牌序条 / 汇总 / 弹窗预览 通用 */
+/* 角色标记徽标：队伍格 / 回合卡 / 牌序条 / 汇总 / 弹窗预览 通用
+   同一角色可能既是队长又是助战，所以多个徽标用 .role-tags 容器横排 */
+.role-tags{display:inline-flex;gap:3px;align-items:center;vertical-align:middle;margin-left:2px;}
 .role-tag{
   display:inline-block;font-size:9px;font-weight:800;letter-spacing:.4px;
   padding:1px 5px;border-radius:5px;line-height:1.5;white-space:nowrap;
@@ -211,16 +213,18 @@ main{
 .role-tag.fr{background:rgba(90,209,196,.14);color:var(--fr);border:1px solid rgba(90,209,196,.45);}
 
 /* 队伍格：标记挂右上角，此时把删除按钮往下让一格，避免叠在一起 */
-.team-slot .role-tag{position:absolute;top:3px;right:4px;}
+.team-slot .role-tags{position:absolute;top:3px;right:4px;gap:2px;}
+.team-slot .role-tag{padding:0 3px;font-size:8.5px;}
 .team-slot.has-role .rm{top:20px;}
-/* 牌序条 / 汇总行里的标记缩小一号，避免抢视线 */
-.chip .role-tag, .sum-row .role-tag{font-size:8.5px;padding:0 4px;letter-spacing:0;}
-.chip .role-tag{margin-left:1px;}
+/* 牌序条 / 回合卡顶行 / 汇总行里的标记缩小一号，避免抢视线 */
+.chip .role-tag, .sum-row .role-tag, .card .top .role-tag{font-size:8.5px;padding:0 4px;letter-spacing:0;}
+.chip .role-tags{margin-left:1px;}
 
-/* 编队快捷位：队长 / 好友对应的那一格色条加一圈描边 */
+/* 编队快捷位：队长 / 助战对应的那一格色条加一圈描边（同一格兼任时套两层） */
 .tp .dots i.lead{box-shadow:0 0 0 1.5px var(--accent2);}
 .tp .dots i.fr{box-shadow:0 0 0 1.5px var(--fr);}
-.tp-preview .mini .role-tag{margin-left:3px;}
+.tp .dots i.lead.fr{box-shadow:0 0 0 1.5px var(--accent2), 0 0 0 3px var(--fr);}
+.tp-preview .mini .role-tags{margin-left:3px;}
 
 /* ---------- 控制条 ---------- */
 .controls{
@@ -543,7 +547,7 @@ main{
   <!-- ============ 中：队伍 + 回合 ============ -->
   <section class="panel">
     <div class="panel-head">
-      <h2>队伍初始顺序（1 → 7）</h2>
+      <h2>队伍初始顺序（1 → 7　自己 6 人 + 助战 1 人）</h2>
       <div style="display:flex;gap:7px;">
         <button class="btn sm" id="btnShuffle">🎲 随机排序</button>
         <button class="btn sm" id="btnAutoFill">从预设自动填满</button>
@@ -554,11 +558,11 @@ main{
     <!-- 编队快捷位：一键换整套队伍 -->
     <div class="team-presets" id="teamPresets"></div>
 
-    <!-- 队长 / 好友：从当前队伍的 7 人中指定，随编队一起保存 -->
+    <!-- 队长 / 助战：从当前队伍的 7 人中指定，随编队一起保存 -->
     <div class="role-bar" id="roleBar">
       <span class="rb lead"><span>👑 队长</span><select id="selLeader"></select></span>
-      <span class="rb fr"><span>🤝 好友</span><select id="selFriend"></select></span>
-      <span class="role-hint">从当前队伍里指定，会随编队一起保存；两者不能是同一人</span>
+      <span class="rb fr"><span>🤝 助战</span><select id="selFriend"></select></span>
+      <span class="role-hint">自己 6 人 + 助战 1 人；同名角色可以出现两张，队长与助战也可以是同一人</span>
     </div>
 
     <div class="panel-body">
@@ -655,7 +659,8 @@ main{
         <div class="tp-preview" id="teamPreview"></div>
       </div>
       <div class="hint">
-        只保存「队伍里有哪 7 个人」、他们的初始槽位顺序，以及<b>队长 / 好友</b>标记。
+        只保存「队伍里有哪 7 个人」、他们的初始槽位顺序，以及<b>队长 / 助战</b>标记
+        （自己的 6 人与助战可以是同一名角色，同名两张会各自占一个槽位）。
         回合数与手动拖出来的排程不会被保存，载入后会按初始顺序重新推演（可在载入后再自行微调）。<br>
         编队与角色预设一起走「导出 / 导入预设库」，方便备份与跨设备迁移。
       </div>
@@ -712,7 +717,7 @@ main{
         type 取值：<code>str</code> 力 / <code>agl</code> 速 / <code>teq</code> 技 / <code>int</code> 知 / <code>phy</code> 体 / <code>none</code> 无。<br>
         也支持完整的预设库备份：<code>{ "presets":[…], "teams":[…] }</code>，
         其中 <code>teams</code> 为编队（每项形如 <code>{ "name":"超赛队", "members":["r:1000460", …7 项], "leader":"r:1000460", "friend":"r:1000760" }</code>，
-        <code>leader</code> / <code>friend</code> 为可选的队长 / 好友标记），
+        <code>leader</code> / <code>friend</code> 为可选的队长 / 助战标记（<code>friend</code> 即助战，两者可以是同一角色）），
         导入时会自动把编队里指向自建卡的引用改成新 id。<br>
         另已暴露全局接口 <code>window.DokkanSorter</code>：<code>addPresets()</code>、<code>saveTeam()</code>、<code>applyTeam()</code>、
         <code>getTeams()</code>、<code>getRoles()</code>、<code>setLeader()</code>、<code>setFriend()</code>、
@@ -741,11 +746,14 @@ main{
     <div class="mbody">
       <div class="hint" style="line-height:1.85;">
         <b style="color:var(--accent2)">一、排序规则</b><br>
-        队伍固定 7 个槽位（1~7）。每回合取从「起始槽位」开始的连续 3 个槽位上场，起始槽位每回合向后移动 3 格并循环：<br>
-        第 1 回合 1-2-3 → 第 2 回合 4-5-6 → 第 3 回合 7-1-2 → 第 4 回合 3-4-5 → 第 5 回合 6-7-1 → …<br><br>
+        队伍固定 7 个槽位（1~7）＝<b>自己的 6 人 + 好友助战 1 人</b>。每回合取从「起始槽位」开始的连续 3 个槽位上场，起始槽位每回合向后移动 3 格并循环：<br>
+        第 1 回合 1-2-3 → 第 2 回合 4-5-6 → 第 3 回合 7-1-2 → 第 4 回合 3-4-5 → 第 5 回合 6-7-1 → …<br>
+        因为自己是 6 人、助战另算，<b>同一个角色允许出现两张</b>（自己一张 + 助战一张），最多两张。<br><br>
         <b style="color:var(--accent2)">二、交换与连锁影响</b><br>
         把本回合的 3 张卡拖动到另一张卡上，即交换这两人的<b>槽位归属</b>。因为角色是绑定在槽位上的，
-        被交换的槽位在后续回合再次上场时，带出的就是交换后的角色 —— 所以任何一次调整都会向下重算该回合之后的全部回合。<br><br>
+        被交换的槽位在后续回合再次上场时，带出的就是交换后的角色 —— 所以任何一次调整都会向下重算该回合之后的全部回合。<br>
+        队伍区里从角色库拖卡进格子是<b>放入</b>语义：这张卡落在该槽位（原来的角色被替换）。
+        同一张卡可以从库里再拖一次，放进另一个槽位 —— 那就是「自己一张 + 助战一张」的同名双角色。<br><br>
         <b style="color:var(--accent2)">三、回合数</b><br>
         默认自动推演 5 回合；可输入任意数字后点「应用」，或用 ＋1 / ＋5 / ＋10 持续向下延伸。已生成回合在延伸时不会被重置。<br><br>
         <b style="color:var(--accent2)">四、把角色排进指定回合（自动反推前置）</b><br>
@@ -753,7 +761,8 @@ main{
         程序会倒推：为了让这个角色在第 T 回合站上这个位置，前面的回合分别需要怎么排 —— 并且<b>尽量把改动推迟到最靠后的回合</b>，
         能不动前面的排布就不动。执行后，被自动调整的格子会标「前置调整」，目标格标「目标位」。<br>
         如果做不到（比如第 1 回合只能动槽位 1-2-3，根本够不到第 2 回合的 4-5-6），
-        拖拽会显示<b>禁止光标</b>并说明原因：它会告诉你这个角色在该回合开始前只可能出现在哪几个槽位。<br><br>
+        拖拽会显示<b>禁止光标</b>并说明原因：它会告诉你这个角色在该回合开始前只可能出现在哪几个槽位。
+        队里有同名两张时，只要<b>任意一张</b>赶得上就能放成，程序会自动挑那一张。<br><br>
         <b style="color:var(--accent2)">五、预设库与图鉴</b><br>
         内置 1458 张卡（中文名 / 属性 / 链接技能 / 分类 / 头像），可按属性、稀有度筛选或搜索。
         点图鉴卡右上角的 <b>☆</b> 收藏进「我的」，已收藏的会变成高亮的 <b>★</b>（再点一次取消）。
@@ -764,10 +773,10 @@ main{
         队伍区顶部有一排<b>编队快捷位</b>。把当前 7 人存成一套编队后，点一下就能整套换人：
         新编队用「＋ 存为编队」，每套编队上悬停可 <b>✎</b> 重命名、<b>✕</b> 删除；
         编队右侧的小色条是这套队伍 7 个槽位的属性指纹，把鼠标停在上面可以看到完整名单。<br>
-        编队<b>只保存「队伍里有哪 7 个人」、他们的初始槽位顺序，以及队长 / 好友标记</b>，不保存回合数与手动拖出来的排程 ——
+        编队<b>只保存「队伍里有哪 7 个人」、他们的初始槽位顺序，以及队长 / 助战标记</b>，不保存回合数与手动拖出来的排程 ——
         载入后会按初始顺序重新推演。当前队伍对应的那套编队会高亮显示。<br>
-        <b>队长 / 好友</b>：队伍区上方的 <b>👑 队长 / 🤝 好友</b> 两个下拉框，可从当前队伍的 7 人里各指定一名
-        （两者不能是同一人）。标记是<b>跟着角色走</b>的 —— 拖动改初始顺序时标记不断，
+        <b>队长 / 助战</b>：队伍区上方的 <b>👑 队长 / 🤝 助战</b> 两个下拉框，可从当前队伍的 7 人里各指定一名
+        （<b>两者可以是同一名角色</b>，这时两枚徽标一起显示）。标记是<b>跟着角色走</b>的 —— 拖动改初始顺序时标记不断，
         并会同步显示在<b>队伍格、当前牌序、回合卡片、出场回合汇总</b>上；角色被移出队伍时标记自动摘掉。
         存编队时这两个标记会一并保存，载入编队时一起恢复；同 7 个人但队长不同的两套编队算作两套。<br>
         编队与角色预设一起保存在浏览器本地，也一起走「导出 / 导入预设库」，
@@ -795,7 +804,8 @@ main{
 /* =======================================================
    常量
    ======================================================= */
-var SLOTS = 7;
+var SLOTS = 7;              // 自己的队伍 6 人 + 好友助战 1 人，共同参与 7 槽轮转
+var MAX_COPIES = 2;         // 同一角色最多出现两份：自己一张 + 助战（好友）一张
 var TYPES = {
   str : {name:'力', color:'#e5484d'},
   agl : {name:'速', color:'#4f83ff'},
@@ -822,7 +832,7 @@ var state = {
   turns: [],                            // 每回合快照：[[id,id,id], ...]
   turnCount: DEFAULT_TURNS,
   leader: null,                         // 队长：统一 key，必须 ∈ team
-  friend: null                          // 好友：统一 key，必须 ∈ team 且 ≠ leader
+  friend: null                          // 助战：统一 key，必须 ∈ team（可与 leader 是同一人）
 };
 var dragSrc = null;
 var dragHintCache = null;              // 拖拽悬停时缓存的试算结果
@@ -918,13 +928,15 @@ function imgHTML(c, cls){
          'onerror="this.style.visibility=\'hidden\'">';
 }
 
-/* 队长 / 好友徽标。显式传 leader/friend 是为了让「别的编队」也能算自己的标记
-   （编队快捷位上显示的必须是那套编队自己的队长，而不是当前队伍的） */
+/* 队长 / 助战徽标。显式传 leader/friend 是为了让「别的编队」也能算自己的标记
+   （编队快捷位上显示的必须是那套编队自己的队长，而不是当前队伍的）
+   同一名角色可以既是队长又是助战（自己带一张 + 借好友一张同名卡），此时两个徽标都出 */
 function roleTagWith(key, leader, friend){
   if(!key) return '';
-  if(leader && leader === key) return '<span class="role-tag lead" title="队长">队长</span>';
-  if(friend && friend === key) return '<span class="role-tag fr" title="好友">好友</span>';
-  return '';
+  var out = '';
+  if(leader && leader === key) out += '<span class="role-tag lead" title="队长">队长</span>';
+  if(friend && friend === key) out += '<span class="role-tag fr" title="助战">助战</span>';
+  return out ? '<span class="role-tags">' + out + '</span>' : '';
 }
 function roleTagOf(key){ return roleTagWith(key, state.leader, state.friend); }
 
@@ -932,6 +944,16 @@ function roleTagOf(key){ return roleTagWith(key, state.leader, state.friend); }
 function startSlot(t){ return (3*t) % SLOTS; }
 function slotsOf(t){ var s = startSlot(t); return [s, (s+1)%SLOTS, (s+2)%SLOTS]; }
 function slotLabels(t){ return slotsOf(t).map(function(i){ return i+1; }); }
+
+/* 某角色在队伍里占了哪几个槽位 —— 自己的队伍 6 人 + 好友助战 1 人，
+   两者可以是同一张卡，所以同名最多出现两份；引擎按「副本」逐个试算。 */
+function teamSlotsOf(key){
+  var out = [];
+  if(!key) return out;
+  for(var i=0;i<state.team.length;i++){ if(state.team[i] === key) out.push(i); }
+  return out;
+}
+function copyCountOf(key){ return teamSlotsOf(key).length; }
 
 function toast(msg){
   var el = $('#toast');
@@ -945,7 +967,7 @@ function toast(msg){
    持久化
    ======================================================= */
 function save(){
-  syncRoles();   // 队长 / 好友必须始终是队伍成员（角色被移出队伍时自动摘掉标记）
+  syncRoles();   // 队长 / 助战必须始终是队伍成员（角色被移出队伍时自动摘掉标记）
   try{
     localStorage.setItem(LS_PRESETS, JSON.stringify(presets));
     localStorage.setItem(LS_TEAMS, JSON.stringify(teams));
@@ -976,20 +998,20 @@ function normalizeTeamKeys(arr){
     return k;
   });
 }
-/* ---------- 队长 / 好友标记 ----------
+/* ---------- 队长 / 助战标记 ----------
    标记绑在「角色」上而不是「槽位」上：拖动改初始顺序时标记跟着人走。
-   两条硬约束：都必须是队伍成员之一，且不能是同一个角色。 */
+   唯一约束：必须是队伍成员之一。队长与助战**允许是同一名角色**
+   —— 自己的队伍 6 人 + 好友助战 1 人，两者完全可以是同一张卡。 */
 function normRoleKey(k){
   if(typeof k !== 'string' || !k) return null;
   return (k.indexOf('r:') === 0 || k.indexOf('p:') === 0) ? k : 'p:' + k;
 }
-/* 规整一对标记：不在成员里的一律置空；同一人兼任时保留队长、清掉好友 */
+/* 规整一对标记：不在成员里的一律置空（同一人兼任是允许的） */
 function normalizeRoles(leader, friend, members){
   var keys = normalizeTeamKeys(members);
   var l = normRoleKey(leader), f = normRoleKey(friend);
   if(keys.indexOf(l) < 0) l = null;
   if(keys.indexOf(f) < 0) f = null;
-  if(l && l === f) f = null;
   return { leader: l, friend: f };
 }
 /* 把 state 上的标记对齐到当前队伍（任何改队伍的操作最终都会经过 save()） */
@@ -999,7 +1021,7 @@ function syncRoles(){
   state.friend = r.friend;
   return r;
 }
-/* 队伍的完整指纹 = 成员顺序 + 队长 + 好友。
+/* 队伍的完整指纹 = 成员顺序 + 队长 + 助战。
    编队去重与「当前」高亮都以它为准：同 7 个人但队长不同，算两套编队。 */
 function teamFullSignature(t){
   t = t || {};
@@ -1020,7 +1042,7 @@ function remapTeamMembers(members, idMap){
     return k;
   });
 }
-/* 同上，但用于单个标记（队长 / 好友）——复用 remapTeamMembers，避免两处逻辑走偏 */
+/* 同上，但用于单个标记（队长 / 助战）——复用 remapTeamMembers，避免两处逻辑走偏 */
 function remapRoleKey(key, idMap){
   return remapTeamMembers([key], idMap)[0] || null;
 }
@@ -1219,16 +1241,9 @@ function goodSets(T){
   return g;
 }
 
-/* 试算（不改动任何数据）：把 key 放到第 T 回合第 P 位，需要调整哪些前置回合
-   返回 { ok:true, steps:[{turn,from,to}], stepsTurns:Set } 或 { ok:false, reason, ... } */
-function planPlacement(key, T, P){
-  if(T < 0 || P < 0 || P > 2) return { ok:false, reason:'bad-target' };
-  var p0 = state.team.indexOf(key);
-  if(p0 < 0) return { ok:false, reason:'not-in-team' };
+/* 单个副本的试算：假定「这一份」此刻在 p0 号槽位（同名双角色时会被调用多次） */
+function planFromSlot(key, p0, T, P){
   var Wt = slotsOf(T);
-  var targetSlot = Wt[P];
-  if(state.turns[T] && state.turns[T][P] === key) return { ok:true, already:true, steps:[], targetSlot:targetSlot };
-
   var g = goodSets(T);
   if(g[0].indexOf(p0) < 0){
     return { ok:false, reason:'infeasible', reachable:reachableSlots(p0,T), need:Wt, key:key, turn:T };
@@ -1259,7 +1274,35 @@ function planPlacement(key, T, P){
   if(Wt.indexOf(pos) < 0){
     return { ok:false, reason:'infeasible', reachable:reachableSlots(p0,T), need:Wt, key:key, turn:T };
   }
-  return { ok:true, steps:steps, used:used, finalSlot:pos, targetSlot:targetSlot, turn:T, pos:P, key:key };
+  return { ok:true, steps:steps, used:used, finalSlot:pos, targetSlot:Wt[P], turn:T, pos:P, key:key, startSlot:p0 };
+}
+
+/* 试算（不改动任何数据）：把 key 放到第 T 回合第 P 位，需要调整哪些前置回合
+   同名角色在队伍里占两个槽位（自己 6 人里的那一份 + 助战那一份）时，
+   逐个副本试算，取第一个可行的 —— 赶得上就够，用户并不关心是哪一份上场。
+   返回 { ok:true, steps:[{turn,from,to}], ... } 或 { ok:false, reason, ... } */
+function planPlacement(key, T, P){
+  if(T < 0 || P < 0 || P > 2) return { ok:false, reason:'bad-target' };
+  var starts = teamSlotsOf(key);
+  if(!starts.length) return { ok:false, reason:'not-in-team' };
+  var Wt = slotsOf(T);
+  if(state.turns[T] && state.turns[T][P] === key){
+    return { ok:true, already:true, steps:[], targetSlot:Wt[P], copies:starts.length };
+  }
+
+  var fails = [];
+  for(var i=0;i<starts.length;i++){
+    var r = planFromSlot(key, starts[i], T, P);
+    if(r.ok){ r.copies = starts.length; return r; }
+    fails.push(r);
+  }
+  // 每一份都赶不上：把可达槽位合并起来再提示（两副本的可达集合取并集才对得上实际）
+  var reach = [];
+  fails.forEach(function(f){
+    (f.reachable || []).forEach(function(s){ if(reach.indexOf(s) < 0) reach.push(s); });
+  });
+  reach.sort(function(a,b){ return a-b; });
+  return { ok:false, reason:'infeasible', reachable:reach, need:Wt, key:key, turn:T, copies:starts.length };
 }
 
 /* 清除反推高亮 */
@@ -1455,23 +1498,29 @@ function renderTeam(){
   }).join('');
 }
 
-/* 队长 / 好友选择器：只列出当前队伍里有人的槽位 */
+/* 队长 / 助战选择器：列出当前队伍里的角色（同名两张只占一项，标注它占了哪几个槽位） */
 function renderRoles(){
-  var filled = [];
-  state.team.forEach(function(k, i){ if(k) filled.push({ key:k, i:i }); });
+  var items = [], seen = {};
+  state.team.forEach(function(k, i){
+    if(!k) return;
+    if(seen[k] === undefined){ seen[k] = items.length; items.push({ key:k, slots:[i] }); }
+    else items[seen[k]].slots.push(i);
+  });
   [['#selLeader','leader'], ['#selFriend','friend']].forEach(function(pair){
     var sel = $(pair[0]);
     if(!sel) return;
     var cur = state[pair[1]] || '';
     var html = '<option value="">（未设置）</option>';
-    filled.forEach(function(it){
+    items.forEach(function(it){
       var c = resolve(it.key);
+      var lab = it.slots.map(function(i){ return i+1; }).join('/');
       html += '<option value="' + esc(it.key) + '"' + (it.key === cur ? ' selected' : '') + '>' +
-        esc((it.i + 1) + '. ' + (c ? dispName(c) : '（已移除）')) + '</option>';
+        esc(lab + '. ' + (c ? dispName(c) : '（已移除）')) + '</option>';
     });
     sel.innerHTML = html;
-    sel.disabled = !filled.length;
-    sel.title = filled.length ? '从队伍的 ' + filled.length + ' 个角色中选' : '队伍还是空的，先从左侧选角色';
+    sel.disabled = !items.length;
+    sel.title = items.length ? '从队伍的 ' + items.length + ' 名角色中选（同名两张视为同一人）'
+                             : '队伍还是空的，先从左侧选角色';
   });
 }
 
@@ -1486,13 +1535,14 @@ function renderTeamPresets(){
     var isCur = teamFullSignature(t) === cur;
     var r = normalizeRoles(t.leader, t.friend, t.members);
     var dots = t.members.map(function(k){
-      var cls = (k && k === r.leader) ? ' class="lead"' : ((k && k === r.friend) ? ' class="fr"' : '');
+      var cls = ((k && k === r.leader) ? ' lead' : '') + ((k && k === r.friend) ? ' fr' : '');
       var c = resolve(k);
-      return '<i' + cls + ' style="background:' + (c ? typeOf(c.type).color : '#39435a') + '"></i>';
+      return '<i' + (cls ? ' class="' + cls.slice(1) + '"' : '') +
+        ' style="background:' + (c ? typeOf(c.type).color : '#39435a') + '"></i>';
     }).join('');
     var tip = t.members.map(function(k, i){
       var c = resolve(k);
-      var mark = (k && k === r.leader) ? '  👑 队长' : ((k && k === r.friend) ? '  🤝 好友' : '');
+      var mark = ((k && k === r.leader) ? '  👑 队长' : '') + ((k && k === r.friend) ? '  🤝 助战' : '');
       return (i+1) + '. ' + (c ? dispName(c) : (k ? '（已移除）' : '空位')) + mark;
     }).join('&#10;');
     var glyph = (r.leader ? '👑' : '') + (r.friend ? '🤝' : '');
@@ -1605,8 +1655,10 @@ function renderSummary(){
   var map = {};      // id -> [回合号]
   var seen = [];
   state.turns.forEach(function(row, t){
+    var inRow = {};                                   // 同名两张在同一回合上场只记一次
     row.forEach(function(id){
-      if(!id) return;
+      if(!id || inRow[id]) return;
+      inRow[id] = 1;
       if(!map[id]){ map[id] = []; seen.push(id); }
       map[id].push(t+1);
     });
@@ -1623,7 +1675,7 @@ function renderSummary(){
       return '<div class="sum-row">' +
         '<span class="dot" style="background:' + t.color + ';color:' + t.color + '"></span>' +
         '<span class="nm">' + esc(dispName(c) || '（已移除）') + roleTagOf(id) + '</span>' +
-        '<span class="tn">' + txt + '<br><span style="opacity:.6">共 ' + arr.length + ' 次</span></span>' +
+        '<span class="tn">' + txt + '<br><span style="opacity:.6">共 ' + arr.length + ' 回合</span></span>' +
       '</div>';
     }).join('');
   }
@@ -1702,11 +1754,16 @@ $('#presetList').addEventListener('click', function(e){
 
 function addToTeam(key){
   if(!key) return;
+  if(copyCountOf(key) >= MAX_COPIES){
+    toast('队伍里已有 2 张「' + nameOf(key) + '」（自己 1 + 助战 1），不能再加');
+    return;
+  }
   var idx = state.team.indexOf(null);
   if(idx < 0){ toast('队伍已满 7 人，先移除一个吧'); return; }
   state.team[idx] = key;
+  var dup = copyCountOf(key);
   rebuild();
-  toast('已加入槽位 ' + (idx+1) + '：' + nameOf(key));
+  toast('已加入槽位 ' + (idx+1) + '：' + nameOf(key) + (dup > 1 ? '（同名第 2 张，可当助战）' : ''));
 }
 /* 把图鉴卡收藏进「我的」，便于二次编辑 / 离线留存 */
 /* 该图鉴卡是否已收藏进「我的」（按 中文名 + 英文名 判定，与 keepToMine 去重口径一致） */
@@ -1760,7 +1817,7 @@ function autoTeamName(){
   while(teams.some(function(t){ return t.name === '编队 ' + n; })) n++;
   return '编队 ' + n;
 }
-/* 载入编队：按其初始顺序重新推演，并恢复队长 / 好友标记
+/* 载入编队：按其初始顺序重新推演，并恢复队长 / 助战标记
    （手动拖出来的排程不复原，符合「只存人」的约定） */
 function applyTeamPreset(id){
   var t = teamById(id);
@@ -1824,7 +1881,7 @@ function confirmTeamModal(){
   var members = teamFromMembers(state.team);
   if(!members.some(Boolean)){ toast('队伍还是空的，先从左侧选几个角色'); return; }
   var r = normalizeRoles(state.leader, state.friend, members);
-  /* 去重看「完整指纹」：同 7 个人但队长 / 好友不同，算两套不同的编队 */
+  /* 去重看「完整指纹」：同 7 个人但队长 / 助战不同，算两套不同的编队 */
   var sig = teamFullSignature({ members: members, leader: r.leader, friend: r.friend });
   var dup = teams.filter(function(x){ return teamFullSignature(x) === sig; })[0];
   if(dup){
@@ -1879,18 +1936,15 @@ $('#teamName').addEventListener('keydown', function(e){
 $('#maskTeam').addEventListener('click', function(e){ if(e.target === this) this.classList.remove('on'); });
 
 /* =======================================================
-   事件：队长 / 好友
+   事件：队长 / 助战
    ======================================================= */
 /* 设置标记的唯一入口（UI 与对外接口共用）。
-   返回 false = 没改动：不在队伍里 / 与另一个标记撞人 / 本来就是它 */
+   返回 false = 没改动：不在队伍里 / 本来就是它。
+   队长与助战可以是同一名角色（自己带一张 + 借好友一张同名卡），不再互斥。 */
 function setRole(which, key){
   if(which !== 'leader' && which !== 'friend') return false;
   var want = normRoleKey(key);
-  if(want){
-    if(state.team.indexOf(want) < 0) return false;          // 必须是队伍成员
-    var other = (which === 'leader') ? state.friend : state.leader;
-    if(want === other) return false;                        // 不能一人身兼两职
-  }
+  if(want && state.team.indexOf(want) < 0) return false;    // 必须是队伍成员
   if((state[which] || null) === want) return false;
   state[which] = want;
   /* 标记会出现在队伍格 / 牌序条 / 回合卡 / 汇总 / 编队「当前」高亮上，一起刷新 */
@@ -1903,15 +1957,11 @@ function onRoleChange(which){
   var sel = $(which === 'leader' ? '#selLeader' : '#selFriend');
   if(!sel) return;
   var val = sel.value || null;
-  var other = (which === 'leader') ? state.friend : state.leader;
-  if(val && val === other){                      // 不允许一人身兼两职
-    toast('队长和好友不能是同一个角色');
-    sel.value = state[which] || '';
-    return;
-  }
   if(!setRole(which, val)) return;
-  if(val) toast((which === 'leader' ? '队长已设为 ' : '好友已设为 ') + nameOf(val));
-  else    toast(which === 'leader' ? '已取消队长标记' : '已取消好友标记');
+  var other = (which === 'leader') ? state.friend : state.leader;
+  var same = val && val === other ? '（与' + (which === 'leader' ? '助战' : '队长') + '同一人）' : '';
+  if(val) toast((which === 'leader' ? '队长已设为 ' : '助战已设为 ') + nameOf(val) + same);
+  else    toast(which === 'leader' ? '已取消队长标记' : '已取消助战标记');
 }
 $('#selLeader').addEventListener('change', function(){ onRoleChange('leader'); });
 $('#selFriend').addEventListener('change', function(){ onRoleChange('friend'); });
@@ -1973,6 +2023,8 @@ function placementHintHTML(key, T, P){
     if(restore) state.team = restore;     // 异常安全：试算绝不改动真实数据
   }
   var addNote = inTeam ? '' : ' <span class="sub">（会先把 ' + esc(nm) + ' 放进队伍空位 ' + (free+1) + '）</span>';
+  /* 同名双角色（自己 1 + 助战 1）时，引擎会自动挑赶得上的那一张 */
+  var dupNote = (plan && plan.copies > 1) ? ' <span class="sub">（队里有 2 张同名卡，会挑赶得上的那张）</span>' : '';
 
   if(plan.ok){
     var how;
@@ -1987,7 +2039,7 @@ function placementHintHTML(key, T, P){
     }
     return {
       ok:true, autoAdd:free, cacheKey:key+'|'+T+'|'+P,
-      html:'<span class="ttl">可以放置</span>：<b>' + esc(nm) + '</b> → ' + posTxt + '。' + how + addNote,
+      html:'<span class="ttl">可以放置</span>：<b>' + esc(nm) + '</b> → ' + posTxt + '。' + how + dupNote + addNote,
       text:'已放置：' + nm + ' → 第 ' + (T+1) + ' 回合第 ' + (P+1) + ' 位' +
         (plan.steps.length ? '（已调整 ' + plan.steps.map(function(s){ return '第'+(s.turn+1)+'回合'; }).join('、') + '）' : '')
     };
@@ -2109,15 +2161,23 @@ $('#teamGrid').addEventListener('drop', function(e){
   var to = parseInt(el.dataset.pos,10);
   if(dragSrc.kind === 'lib'){
     e.preventDefault();
-    var key = dragSrc.key, from = state.team.indexOf(key);
-    if(from >= 0){
-      var t0 = state.team[from]; state.team[from] = state.team[to]; state.team[to] = t0;
-    }else{
-      state.team[to] = key;
+    var key = dragSrc.key;
+    /* 放入语义：这张卡落到这个槽位。同名卡可以占两个槽位（自己 1 + 助战 1），
+       但最多两份 —— 再多就不是游戏里能凑出来的队伍了。 */
+    var old = state.team[to];
+    if(old === key){ clearDragUI(); return; }        // 原地放下，什么都不用做
+    var others = teamSlotsOf(key).filter(function(i){ return i !== to; }).length;
+    if(others >= MAX_COPIES){
+      clearDragUI();
+      toast('队伍里已有 2 张「' + nameOf(key) + '」（自己 1 + 助战 1），不能再加');
+      return;
     }
+    state.team[to] = key;
     clearDragUI();
     rebuild();
-    toast('已放入队伍槽位 ' + (to+1) + '：' + nameOf(key));
+    toast('已放入队伍槽位 ' + (to+1) + '：' + nameOf(key) +
+      (old ? '（替换下 ' + nameOf(old) + '）' : '') +
+      (others ? '（同名第 2 张，可当助战）' : ''));
     return;
   }
   if(dragSrc.kind !== 'team') return;
@@ -2289,6 +2349,10 @@ $('#btnCopyPlan').addEventListener('click', function(){
   if(!state.turns.length){ toast('还没有排程'); return; }
   var lines = ['【龙珠爆裂大战 · 战斗排序】共 ' + state.turns.length + ' 回合'];
   lines.push('初始顺序：' + state.team.map(function(id,i){ return (i+1) + '.' + nameOf(id); }).join('  '));
+  var roles = [];
+  if(state.leader) roles.push('队长 ' + nameOf(state.leader));
+  if(state.friend) roles.push('助战 ' + nameOf(state.friend));
+  if(roles.length) lines.push(roles.join(' ｜ '));
   lines.push('');
   state.turns.forEach(function(row, t){
     lines.push('第' + (t+1) + '回合 [槽位 ' + slotLabels(t).join('-') + ']  ' +
@@ -2598,7 +2662,7 @@ $('#btnLang').addEventListener('click', function(){
    对外接口（为后续 Wiki 抓取预留）
    ======================================================= */
 window.DokkanSorter = {
-  version: '2.3.0',
+  version: '2.4.0',
   typeMap: TYPES,
   /* --- 图鉴 --- */
   getRoster: function(){ return roster.slice(); },
@@ -2662,7 +2726,7 @@ window.DokkanSorter = {
     return true;
   },
   getTeamSignature: function(){ return teamSignature(state.team); },
-  /* ---- 队长 / 好友 ---- */
+  /* ---- 队长 / 助战 ---- */
   getRoles: function(){
     var r = syncRoles();
     return { leader: r.leader, friend: r.friend };
